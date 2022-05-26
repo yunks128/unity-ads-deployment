@@ -1,8 +1,12 @@
 resource "aws_security_group" "app_dev_support_sg" {
-  name        = "unity-ads-${var.tenant_identifier}-dev-env-support-sg"
+  name        = "unity-ads-${var.tenant_identifier}-support-sg"
   description = "U-ADS development environment support security group"
 
   vpc_id = data.aws_vpc.unity_vpc.id
+
+  tags = {
+    Name = "unity-ads-${var.tenant_identifier}-support-sg"
+  }
 
   egress {
     cidr_blocks = ["0.0.0.0/0"]
