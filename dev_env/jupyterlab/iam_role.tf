@@ -17,10 +17,10 @@ resource "aws_iam_role" "eks_cluster_role" {
 }
 POLICY
 
-  description          = "Allows access to other AWS service resources that are required to operate clusters managed by EKS for tenant ${var.tenant_name}."
+  description          = "Allows access to other AWS service resources that are required to operate clusters managed by EKS for tenant ${var.tenant_identifier}."
   managed_policy_arns  = [ "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy" ]
   max_session_duration = "3600"
-  name                 = "Unity-ADS-${var.tenant_name}-EKSClusterRole"
+  name                 = "Unity-ADS-${var.tenant_identifier}-EKSClusterRole"
   path                 = "/"
   permissions_boundary = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/mcp-tenantOperator"
 }
@@ -41,7 +41,7 @@ resource "aws_iam_role" "eks_node_role" {
 }
 POLICY
 
-  description          = "Allows EKS node EC2 instances to call AWS services on behalf of tenant ${var.tenant_name}."
+  description          = "Allows EKS node EC2 instances to call AWS services on behalf of tenant ${var.tenant_identifier}."
   managed_policy_arns  = [ "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy", 
                            "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly",
                            "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy",
@@ -49,7 +49,7 @@ POLICY
                            "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/DatalakeKinesisPolicy",
                            "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/McpToolsAccessPolicy" ]
   max_session_duration = "3600"
-  name                 = "Unity-ADS-${var.tenant_name}-EKSNodeRole"
+  name                 = "Unity-ADS-${var.tenant_identifier}-EKSNodeRole"
   path                 = "/"
   permissions_boundary = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/mcp-tenantOperator"
 }
