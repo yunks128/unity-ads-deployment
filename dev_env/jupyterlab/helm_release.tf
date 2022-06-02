@@ -12,7 +12,7 @@ provider "helm" {
 
 resource "helm_release" "jupyter_helm" {
   name       = "jupyterhub"
-  repository = "https://jupyterhub.github.io/helm-chart/"
+  repository = "https://jupyterhub.github.io/helm-chart"
   chart      = "jupyterhub"
   namespace  = "jhub-${var.tenant_identifier}"
   version    = "1.2.0"
@@ -21,6 +21,9 @@ resource "helm_release" "jupyter_helm" {
   create_namespace = true
 
   values = [
-    file("${path.module}/jupyter_config.yaml")
+    templatefile("${path.module}/jupyter_config.yaml", {
+      oauth_client_id     = var.oauth_client_id
+      oauth_client_secret = var.oauth_client_secret
+    })
   ]
 }
