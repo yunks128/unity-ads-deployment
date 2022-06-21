@@ -1,13 +1,13 @@
-data "aws_vpc" "unity_vpc" {
+data "aws_subnets" "unity_private_subnets" {
   filter {
-    name   = "tag:Name"
-    values = [var.vpc_name]
+    name  = "tag:Name"
+    values = [ "${var.unity_instance}-Priv-Subnet*" ]
   }
 }
 
-data "aws_subnets" "unity_vpc_subnets" {
+data "aws_subnets" "unity_public_subnets" {
   filter {
-    name   = "vpc-id"
-    values = [ "${data.aws_vpc.unity_vpc.id}" ]
+    name  = "tag:Name"
+    values = [ "${var.unity_instance}-Pub-Subnet*" ]
   }
 }
