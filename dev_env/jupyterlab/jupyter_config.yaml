@@ -31,7 +31,7 @@ singleuser:
 hub:
   config:
     OAuthenticator:
-      oauth_callback_url: http://localhost:8080/hub/oauth_callback
+      oauth_callback_url: https://${oauth_callback_domain}:${oauth_callback_port}/hub/oauth_callback
       client_id: ${oauth_client_id}
       client_secret: ${oauth_client_secret}
     GenericOAuthenticator:
@@ -42,3 +42,8 @@ hub:
       userdata_url: https://unitysds.auth.us-west-2.amazoncognito.com/oauth2/userInfo
     JupyterHub:
       authenticator_class: generic-oauth
+proxy:
+  service:
+    type: NodePort
+    nodePorts: 
+      http: ${jupyter_proxy_port}

@@ -14,10 +14,6 @@ resource "aws_eks_cluster" "jupyter_cluster" {
   ]
 }
 
-output "endpoint" {
-  value = aws_eks_cluster.jupyter_cluster.endpoint
-}
-
 resource "aws_eks_node_group" "jupyter_cluster_node_group" {
   cluster_name    = aws_eks_cluster.jupyter_cluster.name
   node_group_name = "unity-ads-${var.tenant_identifier}-jupyter-nodegroup"
@@ -39,4 +35,13 @@ resource "aws_eks_node_group" "jupyter_cluster_node_group" {
   depends_on = [
     aws_iam_role.eks_node_role
   ]
+}
+
+data "aws_instances" "jupyter_cluster_instances" {
+  filter {
+    name = "tag:eks:cluster-name"
+    values = [ aws_eks_cluster.jupyter_cluster.name ]
+  }
+
+  depends_on = [ aws_eks_node_group.jupyter_cluster_node_group ]
 }

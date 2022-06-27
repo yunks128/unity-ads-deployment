@@ -1,7 +1,7 @@
-variable "vpc_name" {
-  description = "Name of the existing VPC deployed within the Unity account"
+variable "unity_instance" {
+  description = "Name of the Unity instance where deploying"
   type        = string
-  default     = "Unity-Dev-VPC"
+  default     = "Unity-Dev"
 }
 
 variable "tenant_identifier" {
