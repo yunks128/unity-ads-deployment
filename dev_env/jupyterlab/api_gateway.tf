@@ -51,8 +51,8 @@ resource "aws_api_gateway_integration" "api_gateway_integration" {
   http_method             = "ANY"
   integration_http_method = "ANY"
 
-  type                    = "HTTP"
-  uri                     = "http://${aws_lb.jupyter_nlb.dns_name}/{proxy}"
+  type                    = "HTTP_PROXY"
+  uri                     = "http://${aws_lb.jupyter_nlb.dns_name}:${aws_lb_listener.jupyter_nlb_listener.port}/{proxy}"
 
   connection_type         = "VPC_LINK"
   connection_id           = aws_api_gateway_vpc_link.api_gateway_lb_link.id
