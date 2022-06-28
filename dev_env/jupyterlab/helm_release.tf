@@ -24,14 +24,9 @@ resource "helm_release" "jupyter_helm" {
     templatefile("${path.module}/jupyter_config.yaml", {
       oauth_client_id       = var.oauth_client_id
       oauth_client_secret   = var.oauth_client_secret
-      oauth_callback_domain = aws_alb.jupyter_alb.dns_name
-      oauth_callback_port   = var.load_balancer_port
+      jupyter_base_path     = local.jupyter_api_path
+      jupyter_base_url      = local.jupyter_api_url
       jupyter_proxy_port    = var.jupyter_proxy_port
     })
-  ]
-
-  # Need to wait for ALB to get 
-  depends_on = [
-    aws_alb.jupyter_alb
   ]
 }

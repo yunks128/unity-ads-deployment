@@ -37,11 +37,9 @@ resource "aws_eks_node_group" "jupyter_cluster_node_group" {
   ]
 }
 
-data "aws_instances" "jupyter_cluster_instances" {
-  filter {
-    name = "tag:eks:cluster-name"
-    values = [ aws_eks_cluster.jupyter_cluster.name ]
-  }
-
-  depends_on = [ aws_eks_node_group.jupyter_cluster_node_group ]
+# Attach eks node_group to load balancer through the autoscaling group
+# Solution from here: https://github.com/aws/containers-roadmap/issues/709
+resource "aws_autoscaling_attachment" "autoscaling_attachment" {
+  autoscaling_group_name = lookup(lookup(lookup(aws_eks_node_group.jupyter_cluster_node_group, "resources")[0], "autoscaling_groups")[0], "name")
+  lb_target_group_arn   = aws_lb_target_group.jupyter_alb_target_group.arn
 }

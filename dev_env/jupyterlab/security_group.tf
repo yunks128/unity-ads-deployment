@@ -1,11 +1,11 @@
 resource "aws_security_group" "jupyter_alb_sg" {
-  name        = "unity-ads-${var.tenant_identifier}-alb-sg"
+  name        = "unity-ads-${var.tenant_identifier}-lb-sg"
   description = "U-ADS ${var.tenant_identifier} JupyterHub application load balancer security group"
 
   vpc_id = data.aws_vpc.unity_vpc.id
 
   tags = {
-    Name = "unity-ads-${var.tenant_identifier}-alb-sg"
+    Name = "unity-ads-${var.tenant_identifier}-lb-sg"
   }
 
   # Allow all outbound traffic.
@@ -26,7 +26,7 @@ resource "aws_security_group" "jupyter_alb_sg" {
 
 }
 
-resource "aws_security_group_rule" "jupyter_cluster_allow_alb" {
+resource "aws_security_group_rule" "jupyter_cluster_allow_lb" {
   type                     = "ingress"
   from_port                = "30000"
   to_port                  = "32767"
