@@ -29,8 +29,8 @@ singleuser:
       kubespawner_override:
         image: jupyter/all-spark-notebook:latest
 hub:
+  baseUrl: ${jupyter_base_path}
   config:
-#    baseUrl: ${jupyter_base_path}
     OAuthenticator:
       oauth_callback_url: ${jupyter_base_url}/hub/oauth_callback
       client_id: ${oauth_client_id}

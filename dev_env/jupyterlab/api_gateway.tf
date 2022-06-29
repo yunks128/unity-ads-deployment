@@ -52,10 +52,14 @@ resource "aws_api_gateway_integration" "api_gateway_integration" {
   integration_http_method = "ANY"
 
   type                    = "HTTP_PROXY"
-  uri                     = "http://${aws_lb.jupyter_nlb.dns_name}:${aws_lb_listener.jupyter_nlb_listener.port}/{proxy}"
+  uri                     = "http://${aws_lb.jupyter_nlb.dns_name}:${aws_lb_listener.jupyter_nlb_listener.port}${local.jupyter_api_path}/{proxy}"
 
   connection_type         = "VPC_LINK"
   connection_id           = aws_api_gateway_vpc_link.api_gateway_lb_link.id
+
+  request_parameters = {
+    "integration.request.path.proxy" = "method.request.path.proxy"
+  }
 }
 
 locals {
