@@ -22,7 +22,7 @@ POLICY
   max_session_duration = "3600"
   name                 = "Unity-ADS-${var.tenant_identifier}-EKSClusterRole"
   path                 = "/"
-  permissions_boundary = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/mcp-tenantOperator"
+  permissions_boundary = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/mcp-tenantOperator-AMI-APIG"
 }
 
 resource "aws_iam_role" "eks_node_role" {
@@ -52,5 +52,5 @@ POLICY
   max_session_duration = "3600"
   name                 = "Unity-ADS-${var.tenant_identifier}-EKSNodeRole"
   path                 = "/"
-  permissions_boundary = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/mcp-tenantOperator"
+  permissions_boundary = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/mcp-tenantOperator-AMI-APIG"
 }

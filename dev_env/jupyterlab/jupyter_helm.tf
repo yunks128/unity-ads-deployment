@@ -3,7 +3,7 @@ provider "helm" {
     host                   = aws_eks_cluster.jupyter_cluster.endpoint
     cluster_ca_certificate = base64decode(aws_eks_cluster.jupyter_cluster.certificate_authority.0.data)
     exec {
-      api_version = "client.authentication.k8s.io/v1alpha1"
+      api_version = "client.authentication.k8s.io/v1beta1"
       args        = ["eks", "get-token", "--cluster-name", aws_eks_cluster.jupyter_cluster.name]
       command     = "aws"
     }
@@ -24,9 +24,12 @@ resource "helm_release" "jupyter_helm" {
     templatefile("${path.module}/jupyter_config.yaml", {
       oauth_client_id       = var.oauth_client_id
       oauth_client_secret   = var.oauth_client_secret
-      jupyter_base_path     = local.jupyter_api_path
-      jupyter_base_url      = local.jupyter_api_url
+      jupyter_base_path     = local.jupyter_base_path
+      jupyter_base_url      = local.jupyter_base_url
       jupyter_proxy_port    = var.jupyter_proxy_port
     })
   ]
+
+  # Need to wait for ALB to get created
+  depends_on = [ aws_lb.jupyter_alb ]
 }
