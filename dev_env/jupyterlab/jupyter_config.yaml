@@ -38,9 +38,9 @@ hub:
     GenericOAuthenticator:
       login_service: "Unity Common Services"
       username_key: username
-      authorize_url: https://unitysds.auth.us-west-2.amazoncognito.com/oauth2/authorize
-      token_url: https://unitysds.auth.us-west-2.amazoncognito.com/oauth2/token
-      userdata_url: https://unitysds.auth.us-west-2.amazoncognito.com/oauth2/userInfo
+      authorize_url: ${cognito_base_url}/oauth2/authorize
+      token_url: ${cognito_base_url}/oauth2/token
+      userdata_url: ${cognito_base_url}/oauth2/userInfo
     JupyterHub:
       authenticator_class: generic-oauth
 proxy:

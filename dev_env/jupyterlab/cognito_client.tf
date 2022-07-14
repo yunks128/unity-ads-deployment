@@ -17,4 +17,12 @@ resource "aws_cognito_user_pool_client" "jupyter_cognito_client" {
   enable_propagate_additional_user_context_data = "false"
   enable_token_revocation                       = "true"
   prevent_user_existence_errors                 = "ENABLED"
+  access_token_validity                         = 60 
+  id_token_validity                             = 60
+
+  token_validity_units {
+    access_token  = "minutes"
+    id_token      = "minutes"
+    refresh_token = "days"
+  }
 }
