@@ -9,3 +9,9 @@ variable "tenant_identifier" {
   type        = string
   default     = "development"
 }
+
+variable "cognito_user_pool_name" {
+  description = "String identifying the Cognito user pool handling authentification"
+  type        = string
+  default     = "unity-user-pool"
+}

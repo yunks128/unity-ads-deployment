@@ -22,8 +22,8 @@ resource "helm_release" "jupyter_helm" {
 
   values = [
     templatefile("${path.module}/jupyter_config.yaml", {
-      oauth_client_id       = var.oauth_client_id
-      oauth_client_secret   = var.oauth_client_secret
+      oauth_client_id       = aws_cognito_user_pool_client.jupyter_cognito_client.id
+      oauth_client_secret   = aws_cognito_user_pool_client.jupyter_cognito_client.client_secret
       jupyter_base_path     = local.jupyter_base_path
       jupyter_base_url      = local.jupyter_base_url
       jupyter_proxy_port    = var.jupyter_proxy_port
