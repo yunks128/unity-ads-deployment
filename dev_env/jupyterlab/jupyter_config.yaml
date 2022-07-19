@@ -28,6 +28,18 @@ singleuser:
       description: "The Jupyter Stacks spark image!"
       kubespawner_override:
         image: jupyter/all-spark-notebook:latest
+    - display_name: "Sounder SIPS Development Environment"
+      description: "Packages and tools replicating the JPL Sounder SIPS development environment"
+      kubespawner_override:
+        image: public.ecr.aws/unity-ads/sounder_sips_dev:r0.1.0
+  storage:
+    extraVolumes:
+      - name: ${dev_support_volume_name}
+        persistentVolumeClaim:
+          claimName: ${dev_support_volume_name}
+    extraVolumeMounts:
+      - name: ${dev_support_volume_name}
+        mountPath: /unity/ads/dev_data
 hub:
   baseUrl: ${jupyter_base_path}
   config:

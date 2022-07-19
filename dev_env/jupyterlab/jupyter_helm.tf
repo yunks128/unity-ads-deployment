@@ -1,15 +1,3 @@
-provider "helm" {
-  kubernetes {
-    host                   = aws_eks_cluster.jupyter_cluster.endpoint
-    cluster_ca_certificate = base64decode(aws_eks_cluster.jupyter_cluster.certificate_authority.0.data)
-    exec {
-      api_version = "client.authentication.k8s.io/v1beta1"
-      args        = ["eks", "get-token", "--cluster-name", aws_eks_cluster.jupyter_cluster.name]
-      command     = "aws"
-    }
-  }
-}
-
 resource "helm_release" "jupyter_helm" {
   name       = "jupyterhub"
   repository = "https://jupyterhub.github.io/helm-chart"
@@ -28,6 +16,7 @@ resource "helm_release" "jupyter_helm" {
       jupyter_base_path     = local.jupyter_base_path
       jupyter_base_url      = local.jupyter_base_url
       jupyter_proxy_port    = var.jupyter_proxy_port
+      dev_support_volume_name = "${kubernetes_persistent_volume.dev_support_kube_volume.metadata.0.name}"
     })
   ]
 
