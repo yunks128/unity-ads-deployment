@@ -1,27 +1,45 @@
-resource "aws_ebs_volume" "dev_support_ebs_volume" {
-  size = "100"
-  type = "io1"
-  iops = 3000
+resource "aws_security_group" "dev_support_efs_sg" {
+   name = "unity-ads-${var.tenant_identifier}-efs_sg"
+   description= "Allows inbound EFS traffic from Jupyter cluster"
+   vpc_id = data.aws_vpc.unity_vpc.id
 
-  multi_attach_enabled = true
-
-  availability_zone = var.ebs_availability_zone
-
-  tags = {
-    Name = "unity-ads-${var.tenant_identifier}-dev-data"
-  }
-
+   ingress {
+     security_groups = [aws_eks_cluster.jupyter_cluster.vpc_config[0].cluster_security_group_id]
+     from_port = 2049
+     to_port = 2049 
+     protocol = "tcp"
+   }     
+        
+   egress {
+     security_groups = [aws_eks_cluster.jupyter_cluster.vpc_config[0].cluster_security_group_id]
+     from_port = 0
+     to_port = 0
+     protocol = "-1"
+   }
 }
 
-resource "kubernetes_storage_class" "io1_storage_class" {
+resource "aws_efs_file_system" "dev_support_efs" {
+   creation_token = "efs"
+   performance_mode = "generalPurpose"
+
+   tags = {
+     Name = "unity-ads-${var.tenant_identifier}-efs_fs"
+   }
+ }
+
+resource "aws_efs_mount_target" "dev_support_efs_mt" {
+   file_system_id  = aws_efs_file_system.dev_support_efs.id
+   subnet_id = tolist(data.aws_subnets.unity_public_subnets.ids)[0]
+   security_groups = [aws_security_group.dev_support_efs_sg.id]
+}
+
+resource "kubernetes_storage_class" "efs_storage_class" {
   metadata {
-    name = "io1"
+    name = "efs"
   }
-  storage_provisioner = "kubernetes.io/aws-ebs"
+  storage_provisioner = "kubernetes.io/aws-efs"
   reclaim_policy      = "Delete"
   parameters = {
-    type = "io1"
-    fsType = "ext4"
   }
 }
 
@@ -31,19 +49,20 @@ resource "kubernetes_persistent_volume" "dev_support_kube_volume" {
   }
 
   spec {
-    access_modes = ["ReadOnlyMany"]
+    access_modes = ["ReadWriteMany"]
+    storage_class_name = "efs"
 
     capacity = {
       storage = "100Gi"
     }
 
-    storage_class_name = "io1"
     persistent_volume_reclaim_policy = "Delete"
 
     persistent_volume_source {
-      aws_elastic_block_store {
-        fs_type = "ext4"
-        volume_id = aws_ebs_volume.dev_support_ebs_volume.id
+      nfs {
+	server    = aws_efs_mount_target.dev_support_efs_mt.ip_address
+        path      = "/"
+	read_only = false
       }
     }
   }
@@ -56,13 +75,16 @@ resource "kubernetes_persistent_volume_claim" "dev_support_kube_volume_claim" {
   }
 
   spec {
-    access_modes = ["ReadOnlyMany"]
+    access_modes = ["ReadWriteMany"]
+
+    # Critical that this is an empty string
+    storage_class_name = "efs"
+
     resources {
       requests = {
         storage = "100Gi"
       }
     }
-    storage_class_name = "io1"
     volume_name = "${kubernetes_persistent_volume.dev_support_kube_volume.metadata.0.name}"
   }
 }

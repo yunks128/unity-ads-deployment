@@ -1,10 +1,4 @@
-variable "app_dev_support_zone" {
-  description = "Availabiltiy zone for the support instance"
-  type        = string
-  default     = "us-west-2a"
-}
-
-data "aws_subnets" "app_dev_support_zone_subnet" {
+data "aws_subnets" "dev_support_zone_subnet" {
 
   filter {
     name   = "vpc-id"
@@ -13,11 +7,11 @@ data "aws_subnets" "app_dev_support_zone_subnet" {
 
   filter {
     name   = "availability-zone"
-    values = [ "${var.app_dev_support_zone}" ]
+    values = [ "${var.dev_support_zone}" ]
   }
 
 }
 
-data "aws_subnet" "app_dev_support_zone_subnet" {
-  id = data.aws_subnets.app_dev_support_zone_subnet.ids[0]
+data "aws_subnet" "dev_support_zone_subnet" {
+  id = data.aws_subnets.dev_support_zone_subnet.ids[0]
 }
