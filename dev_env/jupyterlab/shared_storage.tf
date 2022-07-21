@@ -1,5 +1,5 @@
 resource "aws_security_group" "dev_support_efs_sg" {
-   name = "unity-ads-${var.tenant_identifier}-efs_sg"
+   name = "unity-ads-${var.tenant_identifier}-efs-jupyter-sg"
    description= "Allows inbound EFS traffic from Jupyter cluster"
    vpc_id = data.aws_vpc.unity_vpc.id
 
@@ -29,7 +29,7 @@ resource "aws_efs_file_system" "dev_support_efs" {
 
 resource "aws_efs_mount_target" "dev_support_efs_mt" {
    file_system_id  = aws_efs_file_system.dev_support_efs.id
-   subnet_id = tolist(data.aws_subnets.unity_public_subnets.ids)[0]
+   subnet_id       = tolist(data.aws_subnets.unity_public_subnets.ids)[0]
    security_groups = [aws_security_group.dev_support_efs_sg.id]
 }
 

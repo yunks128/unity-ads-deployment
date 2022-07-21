@@ -21,9 +21,3 @@ variable "cognito_user_pool_name" {
   type        = string
   default     = "unity-user-pool"
 }
-
-variable "ebs_availability_zone" {
-  description = "Availability zone for shared cluster EBS data"
-  type        = string
-  default     = "us-west-2a"
-}
