@@ -7,4 +7,4 @@ sudo apt update
 sudo apt install nfs-client
 
 # Allow access to NFS
-sudo ufw allow 2049
+sudo ufw allow out 2049
