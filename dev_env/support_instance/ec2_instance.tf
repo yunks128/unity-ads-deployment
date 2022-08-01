@@ -26,6 +26,8 @@ resource "aws_instance" "dev_support_ec2" {
     volume_type = "gp2"
   }
 
-  user_data = "${file("init.sh")}"
+  user_data = templatefile("init.sh", {
+    efs_ip_address = aws_efs_mount_target.dev_support_efs_mt.ip_address
+  })
 
 }
