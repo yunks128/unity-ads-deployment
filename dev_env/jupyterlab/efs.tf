@@ -1,5 +1,5 @@
 resource "aws_security_group" "dev_support_efs_jupyter_sg" {
-   name = "unity-ads-${var.tenant_identifier}-efs-jupyter-sg"
+   name = "${var.resource_prefix}-${var.tenant_identifier}-efs-jupyter-sg"
    description= "Allows inbound EFS traffic from Jupyter cluster"
    vpc_id = data.aws_vpc.unity_vpc.id
 
@@ -36,7 +36,7 @@ resource "kubernetes_storage_class" "efs_storage_class" {
 
 resource "kubernetes_persistent_volume" "dev_support_kube_volume" {
   metadata {
-    name = "unity-ads-${var.tenant_identifier}-dev-data"
+    name = "${var.resource_prefix}-${var.tenant_identifier}-dev-data"
   }
 
   spec {
@@ -61,7 +61,7 @@ resource "kubernetes_persistent_volume" "dev_support_kube_volume" {
 
 resource "kubernetes_persistent_volume_claim" "dev_support_kube_volume_claim" {
   metadata {
-    name = "unity-ads-${var.tenant_identifier}-dev-data"
+    name = "${var.resource_prefix}-${var.tenant_identifier}-dev-data"
     namespace = helm_release.jupyter_helm.namespace
   }
 

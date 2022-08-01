@@ -6,7 +6,7 @@ resource "aws_lb" "jupyter_alb" {
   subnets            = data.aws_subnets.unity_public_subnets.ids
 
   tags = {
-    Name = "unity-ads-${var.tenant_identifier}-jupyter-alb"
+    Name = "${var.resource_prefix}-${var.tenant_identifier}-jupyter-alb"
   }
 }
 
@@ -19,7 +19,7 @@ resource "aws_lb_target_group" "jupyter_alb_target_group" {
   port             = var.jupyter_proxy_port
 
   tags = {
-    name = "unity-ads-${var.tenant_identifier}-alb-target-group"
+    name = "${var.resource_prefix}-${var.tenant_identifier}-alb-target-group"
   }
 
   # alter the destination of the health check
@@ -64,7 +64,7 @@ resource "aws_lb_listener" "jupyter_alb_listener" {
   certificate_arn  = aws_iam_server_certificate.jupyter_alb_server_certificate.arn
 
   tags = {
-    Name = "unity-ads-${var.tenant_identifier}-alb-listener"
+    Name = "${var.resource_prefix}-${var.tenant_identifier}-alb-listener"
   }
 
   default_action {

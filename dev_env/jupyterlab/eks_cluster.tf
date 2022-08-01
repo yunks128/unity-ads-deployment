@@ -1,5 +1,5 @@
 resource "aws_eks_cluster" "jupyter_cluster" {
-  name     = "unity-ads-${var.tenant_identifier}-jupyter-cluster"
+  name     = "${var.resource_prefix}-${var.tenant_identifier}-jupyter-cluster"
   role_arn = aws_iam_role.eks_cluster_role.arn
   version  = "1.22"
 
@@ -16,7 +16,7 @@ resource "aws_eks_cluster" "jupyter_cluster" {
 
 resource "aws_eks_node_group" "jupyter_cluster_node_group" {
   cluster_name    = aws_eks_cluster.jupyter_cluster.name
-  node_group_name = "unity-ads-${var.tenant_identifier}-jupyter-nodegroup"
+  node_group_name = "${var.resource_prefix}-${var.tenant_identifier}-jupyter-nodegroup"
   node_role_arn   = aws_iam_role.eks_node_role.arn
   subnet_ids      = data.aws_subnets.unity_public_subnets.ids
 

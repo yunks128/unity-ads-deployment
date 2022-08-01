@@ -6,7 +6,7 @@ resource "aws_lb" "jupyter_alb" {
   subnets            = data.aws_subnets.unity_public_subnets.ids
 
   tags = {
-    Name = "unity-ads-${var.tenant_identifier}-jupyter-alb"
+    Name = "${var.resource_prefix}-${var.tenant_identifier}-jupyter-alb"
   }
 }
 
@@ -18,7 +18,7 @@ resource "aws_lb_target_group" "jupyter_alb_target_group" {
   vpc_id      = data.aws_vpc.unity_vpc.id
 
   tags = {
-    name = "unity-ads-${var.tenant_identifier}-alb-target-group"
+    name = "${var.resource_prefix}-${var.tenant_identifier}-alb-target-group"
   }
 
   # alter the destination of the health check
@@ -34,7 +34,7 @@ resource "aws_lb_listener" "jupyter_alb_listener" {
   protocol          = "HTTP"
 
   tags = {
-    Name = "unity-ads-${var.tenant_identifier}-alb-listener"
+    Name = "${var.resource_prefix}-${var.tenant_identifier}-alb-listener"
   }
 
   default_action {
@@ -50,7 +50,7 @@ resource "aws_lb" "jupyter_nlb" {
   subnets            = data.aws_subnets.unity_public_subnets.ids
 
   tags = {
-    Name = "unity-ads-${var.tenant_identifier}-jupyter-nlb"
+    Name = "${var.resource_prefix}-${var.tenant_identifier}-jupyter-nlb"
   }
 }
 
@@ -62,7 +62,7 @@ resource "aws_lb_target_group" "jupyter_nlb_target_group" {
   vpc_id      = data.aws_vpc.unity_vpc.id
 
   tags = {
-    name = "unity-ads-${var.tenant_identifier}-nlb-target-group"
+    name = "${var.resource_prefix}-${var.tenant_identifier}-nlb-target-group"
   }
 
   # alter the destination of the health check
@@ -85,7 +85,7 @@ resource "aws_lb_listener" "jupyter_nlb_listener" {
   protocol          = "TCP"
 
   tags = {
-    Name = "unity-ads-${var.tenant_identifier}-nlb-listener"
+    Name = "${var.resource_prefix}-${var.tenant_identifier}-nlb-listener"
   }
 
   default_action {

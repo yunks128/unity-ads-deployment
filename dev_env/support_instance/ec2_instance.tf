@@ -5,7 +5,6 @@ data "aws_subnet" "dev_support_subnet" {
 resource "aws_instance" "dev_support_ec2" {
   ami            = "ami-043738bfa891187cc"
   instance_type  = "t2.micro"
-  #instance_state = "stopped"
 
   key_name      = aws_key_pair.dev_support_key_pair.key_name
 
@@ -17,7 +16,7 @@ resource "aws_instance" "dev_support_ec2" {
   iam_instance_profile = "MCP-SSM-CloudWatch"
 
   tags = {
-    Name = "unity-ads-${var.tenant_identifier}-support-instance"
+    Name = "${var.resource_prefix}-${var.tenant_identifier}-support-instance"
   }
 
   root_block_device {

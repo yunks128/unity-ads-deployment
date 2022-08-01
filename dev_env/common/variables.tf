@@ -21,3 +21,9 @@ variable "cognito_user_pool_name" {
   type        = string
   default     = "unity-user-pool"
 }
+
+variable "resource_prefix" {
+  description = "String used at the beginning of the names for all resources to identify them according to the UADS subsystem"
+  type        = string
+  default     = "uads"
+}

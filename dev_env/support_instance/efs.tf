@@ -1,5 +1,5 @@
 resource "aws_security_group" "dev_support_efs_ec2_sg" {
-   name = "unity-ads-${var.tenant_identifier}-efs-ec2-sg"
+   name = "${var.resource_prefix}-${var.tenant_identifier}-efs-ec2-sg"
    description= "Allows inbound EFS traffic from Support EC2 Instance"
    vpc_id = data.aws_vpc.unity_vpc.id
 

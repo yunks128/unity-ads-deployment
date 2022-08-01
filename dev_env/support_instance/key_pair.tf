@@ -4,7 +4,7 @@ resource "tls_private_key" "dev_support_priv_key" {
 }
 
 resource "aws_key_pair" "dev_support_key_pair" {
-  key_name   = "unity-ads-${var.tenant_identifier}-support-kp"
+  key_name   = "${var.resource_prefix}-${var.tenant_identifier}-support-kp"
   public_key = tls_private_key.dev_support_priv_key.public_key_openssh
 }
 
