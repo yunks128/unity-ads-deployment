@@ -1,4 +1,4 @@
-resource "aws_security_group" "dev_support_efs_sg" {
+resource "aws_security_group" "dev_support_efs_jupyter_sg" {
    name = "unity-ads-${var.tenant_identifier}-efs-jupyter-sg"
    description= "Allows inbound EFS traffic from Jupyter cluster"
    vpc_id = data.aws_vpc.unity_vpc.id
@@ -18,19 +18,10 @@ resource "aws_security_group" "dev_support_efs_sg" {
    }
 }
 
-resource "aws_efs_file_system" "dev_support_efs" {
-   creation_token = "efs"
-   performance_mode = "generalPurpose"
-
-   tags = {
-     Name = "unity-ads-${var.tenant_identifier}-efs_fs"
-   }
- }
-
 resource "aws_efs_mount_target" "dev_support_efs_mt" {
    file_system_id  = aws_efs_file_system.dev_support_efs.id
    subnet_id       = tolist(data.aws_subnets.unity_public_subnets.ids)[0]
-   security_groups = [aws_security_group.dev_support_efs_sg.id]
+   security_groups = [aws_security_group.dev_support_efs_jupyter_sg.id]
 }
 
 resource "kubernetes_storage_class" "efs_storage_class" {
