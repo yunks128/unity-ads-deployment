@@ -16,7 +16,7 @@ resource "helm_release" "jupyter_helm" {
       jupyter_base_path     = local.jupyter_base_path
       jupyter_base_url      = local.jupyter_base_url
       jupyter_proxy_port    = var.jupyter_proxy_port
-      dev_support_volume_name = "${kubernetes_persistent_volume.dev_support_kube_volume.metadata.0.name}"
+      shared_volume_name    = "${kubernetes_persistent_volume.dev_support_shared_volume.metadata.0.name}"
     })
   ]
 

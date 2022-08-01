@@ -19,7 +19,7 @@ resource "aws_security_group" "dev_support_efs_jupyter_sg" {
 }
 
 resource "aws_efs_mount_target" "dev_support_efs_mt" {
-   file_system_id  = aws_efs_file_system.dev_support_efs.id
+   file_system_id  = data.aws_efs_file_system.dev_support_fs.id
    subnet_id       = tolist(data.aws_subnets.unity_public_subnets.ids)[0]
    security_groups = [aws_security_group.dev_support_efs_jupyter_sg.id]
 }
@@ -34,7 +34,7 @@ resource "kubernetes_storage_class" "efs_storage_class" {
   }
 }
 
-resource "kubernetes_persistent_volume" "dev_support_kube_volume" {
+resource "kubernetes_persistent_volume" "dev_support_shared_volume" {
   metadata {
     name = "${var.resource_prefix}-${var.tenant_identifier}-dev-data"
   }
@@ -51,15 +51,15 @@ resource "kubernetes_persistent_volume" "dev_support_kube_volume" {
 
     persistent_volume_source {
       nfs {
-	server    = aws_efs_mount_target.dev_support_efs_mt.ip_address
-        path      = "/"
-	read_only = false
+	    server    = aws_efs_mount_target.dev_support_efs_mt.ip_address
+        path      = "/shared"
+        read_only = false
       }
     }
   }
 }
 
-resource "kubernetes_persistent_volume_claim" "dev_support_kube_volume_claim" {
+resource "kubernetes_persistent_volume_claim" "dev_support_shared_volume_claim" {
   metadata {
     name = "${var.resource_prefix}-${var.tenant_identifier}-dev-data"
     namespace = helm_release.jupyter_helm.namespace
@@ -76,6 +76,6 @@ resource "kubernetes_persistent_volume_claim" "dev_support_kube_volume_claim" {
         storage = "100Gi"
       }
     }
-    volume_name = "${kubernetes_persistent_volume.dev_support_kube_volume.metadata.0.name}"
+    volume_name = "${kubernetes_persistent_volume.dev_support_shared_volume.metadata.0.name}"
   }
 }

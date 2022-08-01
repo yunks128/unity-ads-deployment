@@ -35,12 +35,12 @@ singleuser:
         image_pull_policy: Always
   storage:
     extraVolumes:
-      - name: ${dev_support_volume_name}
+      - name: ${shared_volume_name}
         persistentVolumeClaim:
-          claimName: ${dev_support_volume_name}
+          claimName: ${shared_volume_name}
     extraVolumeMounts:
-      - name: ${dev_support_volume_name}
-        mountPath: /unity/ads/dev_data
+      - name: ${shared_volume_name}
+        mountPath: /unity/ads
 hub:
   baseUrl: ${jupyter_base_path}
   config:
