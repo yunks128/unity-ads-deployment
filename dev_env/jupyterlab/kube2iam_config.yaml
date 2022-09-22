@@ -1,0 +1,10 @@
+extraArgs:
+  base-role-arn: ${base_role_arn}
+  default-role: ${default_role}
+
+host:
+  iptables: true
+  interface: "eni+"
+
+rbac:
+  create: true

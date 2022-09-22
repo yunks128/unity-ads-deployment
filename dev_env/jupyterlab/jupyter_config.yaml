@@ -41,6 +41,11 @@ singleuser:
     extraVolumeMounts:
       - name: ${shared_volume_name}
         mountPath: /unity/ads
+  extraAnnotations:
+    iam.amazonaws.com/role: ${kube2iam_role_arn}
+  cloudMetadata:
+    blockWithIptables: false
+    ip: 169.254.169.254
 hub:
   baseUrl: ${jupyter_base_path}
   config:

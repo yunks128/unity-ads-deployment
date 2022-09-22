@@ -17,9 +17,10 @@ resource "helm_release" "jupyter_helm" {
       jupyter_base_url      = local.jupyter_base_url
       jupyter_proxy_port    = var.jupyter_proxy_port
       shared_volume_name    = "${kubernetes_persistent_volume.dev_support_shared_volume.metadata.0.name}"
+      kube2iam_role_arn     = "${aws_iam_role.jupyter_node_role.arn}"
     })
   ]
 
   # Need to wait for ALB to get created
-  depends_on = [ aws_lb.jupyter_alb ]
+  depends_on = [ aws_lb.jupyter_alb, helm_release.kube2iam_helm ]
 }
