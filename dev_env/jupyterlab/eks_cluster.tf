@@ -35,6 +35,10 @@ resource "aws_eks_node_group" "jupyter_cluster_node_group" {
   depends_on = [
     aws_iam_role.eks_node_role
   ]
+
+  lifecycle {
+    ignore_changes = [ scaling_config ]
+  }
 }
 
 # Attach eks node_group to load balancer through the autoscaling group
