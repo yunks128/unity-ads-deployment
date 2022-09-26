@@ -67,12 +67,12 @@ resource "aws_iam_policy" "jupyter_node_policy" {
                 "s3-object-lambda:List*"
             ],
             "Resource": [
-                "arn:aws:s3:::uds-dev-cumulus-private",
-                "arn:aws:s3:::uds-dev-cumulus-protected",
-                "arn:aws:s3:::uds-dev-cumulus-public",
-                "arn:aws:s3:::uds-dev-cumulus-protected/*",
-                "arn:aws:s3:::uds-dev-cumulus-private/*",
-                "arn:aws:s3:::uds-dev-cumulus-public/*"
+                "arn:aws:s3:::uds-${var.s3_identifier}-cumulus-private",
+                "arn:aws:s3:::uds-${var.s3_identifier}-cumulus-protected",
+                "arn:aws:s3:::uds-${var.s3_identifier}-cumulus-public",
+                "arn:aws:s3:::uds-${var.s3_identifier}-cumulus-protected/*",
+                "arn:aws:s3:::uds-${var.s3_identifier}-cumulus-private/*",
+                "arn:aws:s3:::uds-${var.s3_identifier}-cumulus-public/*"
             ]
         }
       ]
@@ -90,7 +90,8 @@ resource "aws_iam_role" "eks_node_role" {
   path                 = "/"
   description          = "Allows EKS node EC2 instances to call AWS services on behalf of tenant ${var.tenant_identifier}."
 
-  managed_policy_arns  = [ "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy", 
+  managed_policy_arns  = [ aws_iam_policy.eks_node_assume_policy.arn,
+                           "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy", 
                            "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly",
                            "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy",
                            "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
