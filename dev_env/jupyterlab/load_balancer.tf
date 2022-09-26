@@ -39,7 +39,8 @@ resource "tls_self_signed_cert" "jupyter_alb_certificate_data" {
     organization = "${var.unity_instance}"
   }
 
-  validity_period_hours = 336
+  # About half a year
+  validity_period_hours = 4320
 
   allowed_uses = [
     "key_encipherment",
@@ -50,11 +51,23 @@ resource "tls_self_signed_cert" "jupyter_alb_certificate_data" {
   depends_on = [ aws_lb.jupyter_alb ]
 }
 
+resource "random_id" "cert" {
+  keepers = {
+    cert_expiration = tls_self_signed_cert.jupyter_alb_certificate_data.validity_end_time
+  }
+
+  byte_length = 8
+}
+
 # For example, this can be used to populate an AWS IAM server certificate.
 resource "aws_iam_server_certificate" "jupyter_alb_server_certificate" {
-  name             = "Unity-${var.tenant_identifier}-JupyterHub-Certificate"
+  name             = "Unity-${var.tenant_identifier}-JupyterHub-Certificate-${random_id.cert.hex}"
   certificate_body = tls_self_signed_cert.jupyter_alb_certificate_data.cert_pem
   private_key      = file("private_key.pem")
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_lb_listener" "jupyter_alb_listener" {
