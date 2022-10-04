@@ -1,0 +1,1467 @@
+# Commit: db4678a https://github.com/dockstore/dockstore-deploy/commits/db4678a
+# A template to create AWS resources for running Dockstore
+#
+# PreInstall
+# ----------
+#
+# * An S3 bucket will be created when s3.yml is ran prior to running this template. This bucket has the same name as the domain, except periods
+#   are replaced with dashes. For example, if you are creating the stack for the domain ".dockstore.net", the S3 bucket is named "dev-dockstore-net".
+#
+#   You must manually create two folders in this S3 bucket:
+#     1. bootstrap
+#     2. grafana
+#
+#   The 'bootstrap' folder contains two items, which you must manually place into the folder:
+#     1. database.tar.gz, that has one file in it, database.sql. This file is used to populate the database.
+#     2. dockstore-github-private-key.tar.gz, with one file in it, dockstore-github-private-key.pem. This is the PEM file for GitHub apps.
+#
+#   The 'grafana' folder contains two items, which you must manually place into the folder:
+#     1. dockstore-dashboard.json.mustache -> This is a Grafana dashboard json file that will be imported to Grafana to create a dashboard.
+#     2. grafana_database_backup.db -> This is a Grafana database that is restored to the Grafana instance so previously created users still exist.
+#        ** This file is OPTIONAL if you choose NOT to restore Grafana users with a Grafana database. If you don't want to restore users, make sure
+#           that the RestoreGrafanaUsers parameter is set to 'false' when you are deploying this template.
+#
+# * Create an AWS keypair.
+# * Ensure correct values are filled out in SSM Parameter Store
+#
+# Install
+# -------
+#
+# 0. Run log-group.yml
+# 2. Run core-<env>.yml
+# 3. Run s3-<env>.yml
+# 4. Run dockstore-<env>.yml. You will need the stack names from steps 2 and 3.
+#
+# Unlike other resources created as part of the stack, the log group, whose name is the domain name,
+# is not deleted when the stack is deleted. Attempting to create the same log group a second time will cause that stack
+# creation to fail.
+#
+# PostInstall
+# -----------
+#
+# Add or modify the recordset for your domain to point to the load balancer created in this stack. Point
+# it to the output value from runnig the stack.
+#
+# TODO
+#
+# 1. Should fire some sort of notification when update is performed or fails (Slack?).
+
+---
+
+Description: >
+  Manages the Dockstore EC2 instances, as well as the lambda that fetches from SQS and invokes the web service.
+
+Parameters:
+  AutoUpdate:
+    Description: Whether the webservice and UI should update themselves nightly. Set to false for staging and prod!
+    Type: String
+    Default: false
+    AllowedValues:
+      - true
+      - false
+  #CheckUrlExistsStack:
+  #  Description: The name of the check url exists stack.
+  #  Type: String
+  #  MinLength: 1
+  #CheckUrlLambdaVersion:
+  #  Description: The check url lambda version.
+  #  Type: String
+  #  Default: ''
+  #CWLParsingLambdaVersion:
+  #  Description: The CWL parsing lambda version.
+  #  Type: String
+  #  Default: ''
+  CoreStack:
+    Description: The name of the core stack.
+    Type: String
+    MinLength: 1
+    Default: 'uads-test-dockstore-core'
+  S3Stack:
+    Description: The name of the S3 stack.
+    Type: String
+    MinLength: 1
+    Default: 'uads-dev-dockstore-s3'
+  RdsStack:
+    Description: The name of the RDS stack
+    Type: String
+    MinLength: 1
+    Default: 'uads-test-dockstore-database'
+  ElasticsearchStack:
+    Description: The name of the Elasticsearch stack
+    Type: String
+    MinLength: 1
+    Default: 'uads-test-dockstore-es'
+  ElasticsearchMaxConcurrentSessions:
+    Description: The max number of concurrent calls allowed for the search endpoint
+    Type: Number
+    Default: 150
+    MinValue: 1
+  ComposeSetupVersion:
+    Description: Branch/tag of compose_setup to checkout
+    Type: String
+    Default: elop
+    MinLength: 1
+  DockstoreDeployVersion:
+    Description: The name of a dockstore deploy git reference, used to find a deploy build in the deploy bucket
+    Type: String
+    Default: 1.12.3
+  WebserviceTag:
+    Description: The webservice quay.io tag on https://quay.io/repository/dockstore/dockstore-webservice?tab=tags. Only specify the tag, e.g., elop
+    Type: String
+    Default: elop
+  UiVersion:
+    Description: The UI version; must be available via CloudFront
+    Type: String
+    MinLength: 1
+    Default: elop-a8b625d
+  #GalaxyPluginVersion:
+  #  Description: Which version of galaxy to download from artifactory (e.g. 0.0.3). Leave blank if no version desired.
+  #  Type: String
+  #  Default: 0.0.7
+  #DockstoreLambdaBucket:
+  #  Description: The s3 bucket with zip files of Dockstore lambda. Must be in same region as the CF stack. For us-east-1, dockstore.lambda; for us-west-2, dockstore.lambda.us-west.
+  #  Type: String
+  #  Default: 'dockstore.lambda'
+  #DockstoreLambdaKey:
+  #  Description: The s3 key of the Dockstore lambda zip file
+  #  Type: String
+  #  Default: 'elop-7cb8cb8/upsertGitHubTag/function.zip'
+  #DockstoreLambdaMaxConcurrency:
+  #  Description: ReservedConcurrentExecutions for the Dockstore lambda to throttle requests. 0 uses AWS account's remaining unreserved lambda concurrency.
+  #  Type: Number
+  #  Default: 12
+  #  MinValue: 0
+  #  MaxValue: 1000
+  AvailabilityZone:
+    Description: The AWS availability zone, e.g, us-east-1a
+    Type: String
+    AllowedValues:
+      # Just a starting point; we could support all zones. And there is a better way to do this, see FN:GetAZs
+      #- us-east-1a
+      #- us-east-1b
+      #- us-west-1a
+      #- us-west-1b
+      - us-west-2a
+      - us-west-2b
+      #- us-east-2a
+      #- us-east-2b
+    Default: us-west-2a
+  InstanceType:
+    Description: The EC2 instance type for Dockstore
+    Type: String
+    Default: t2.medium
+  LoadBalancerIdleTimeout:
+    Description: The idle timeout value, in seconds
+    Type: Number
+    Default: 600
+    MinValue: 1
+    MaxValue: 4000
+  #NextflowParsingLambdaVersion:
+  #  Description: The nextflow parsing lambda version.
+  #  Type: String
+  #  Default: ''
+  #WDLParsingLambdaVersion:
+  #  Description: The WDL parsing lambda version.
+  #  Type: String
+  #  Default: ''
+  
+
+  # Application level parameters with values in Parameter Store
+  AuthorizerType:
+    Description: The authorizer Dockstore should use -- inmemory, sam, or none
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /DeploymentConfig/test/AuthorizerType
+  #BdCatalystSevenBridgesImportUrl:
+  #  Description: The import url for the Seven Bridges instance of BD Catalyst
+  #  Type: AWS::SSM::Parameter::Value<String>
+  #  Default: /DeploymentConfig/test/BdCatalystSevenBridgesImportUrl
+  #BdCatalystTerraImportUrl:
+  #  Description: The import url for the Terra instance of BD Catalyst
+  #  Type: AWS::SSM::Parameter::Value<String>
+  #  Default: /DeploymentConfig/test/BdCatalystTerraImportUrl
+  #BitbucketClientId:
+  #  Description: The Bitbucket client id
+  #  Type: AWS::SSM::Parameter::Value<String>
+  #  Default: /DeploymentConfig/test/BitbucketClientId
+  #BitbucketClientSecret:
+  #  Description: The Bitbucket client secret
+  #  Type: AWS::SSM::Parameter::Value<String>
+  #  Default: /DeploymentConfig/test/BitbucketClientSecret
+  #  NoEcho: true
+  #DiscourseCategoryId:
+  #  Description: The Discourse category id
+  #  Type: AWS::SSM::Parameter::Value<String>
+  #  Default: /DeploymentConfig/test/DiscourseCategoryId
+  #DiscourseKey:
+  #  Description: The Discourse key
+  #  Type: AWS::SSM::Parameter::Value<String>
+  #  Default: /DeploymentConfig/test/DiscourseKey
+  #  NoEcho: true
+  #DiscourseUrl:
+  #  Description: The Discourse url
+  #  Type: AWS::SSM::Parameter::Value<String>
+  #  Default: /DeploymentConfig/test/DiscourseUrl
+  #DockstoreApiUrl:
+  #  Description: The fully qualified base url for the Dockstore API trailing slash required, e.g., https://.dockstore.net/api/
+  #  Type: AWS::SSM::Parameter::Value<String>
+  #  Default: /DeploymentConfig/test/DockstoreApiUrl
+  #DockstoreToken:
+  #  Description: The Dockstore token used by the lambda to make API calls to Dockstore
+  #  Type: AWS::SSM::Parameter::Value<String>
+  #  Default: /DeploymentConfig/test/DockstoreToken
+  #  NoEcho: true
+  #DocumentationUrl:
+  #  Description: The documentation  url
+  #  Type: AWS::SSM::Parameter::Value<String>
+  #  Default: /DeploymentConfig/test/DocumentationUrl
+  DomainName:
+    Description: The domain of this Dockstore instance, e.g., dockstore.org, staging.dockstore.org, .dockstore.net
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /DeploymentConfig/test/DomainName
+  #ExternalGoogleClientPrefix:
+  #  Description: The external Google audience that Dockstore will accept tokens from
+  #  Type: AWS::SSM::Parameter::Value<String>
+  #  Default: /DeploymentConfig/test/ExternalGoogleClientPrefix
+  #FeaturedContentUrl:
+  #  Description: The CloudFront content to populate the featured collection and organization
+  #  Type: AWS::SSM::Parameter::Value<String>
+  #  Default: /DeploymentConfig/test/FeaturedContentURL
+  #FeaturedNewsUrl:
+  #  Description: The CloudFront content to populate news and events
+  #  Type: AWS::SSM::Parameter::Value<String>
+  #  Default: /DeploymentConfig/test/FeaturedNewsURL    
+  GitHubAppId:
+    Description: The GitHub App id
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /DeploymentConfig/test/GitHubAppId
+  GitHubAppName:
+    Description: The GitHub App name
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /DeploymentConfig/test/GitHubAppName
+  GitHubClientId:
+    Description: The GitHub Client id
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /DeploymentConfig/test/GitHubClientId
+  GitHubClientSecret:
+    Description: The GitHub Client secret
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /DeploymentConfig/test/GitHubClientSecret
+    NoEcho: true
+  #GitLabClientId:
+  #  Description: The GitLab Client id
+  #  Type: AWS::SSM::Parameter::Value<String>
+  #  Default: /DeploymentConfig/test/GitLabClientId
+  #GitLabClientSecret:
+  #  Description: The GitLab Client secret
+  #  Type: AWS::SSM::Parameter::Value<String>
+  #  Default: /DeploymentConfig/test/GitLabClientSecret
+  #  NoEcho: true
+  #GoogleClientId:
+  #  Description: The Google Client secret
+  #  Type: AWS::SSM::Parameter::Value<String>
+  #  Default: /DeploymentConfig/test/GoogleClientId
+  #GoogleClientSecret:
+  #  Description: The Google Client secret
+  #  Type: AWS::SSM::Parameter::Value<String>
+  #  Default: /DeploymentConfig/test/GoogleClientSecret
+  #  NoEcho: true
+  DBDockstoreUserPassword:
+    Description: The password for the Postgres dockstore user
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /DeploymentConfig/test/DBDockstorePassword
+    NoEcho: true
+  DBPostgresPassword:
+    Description: The Postgres user password
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /DeploymentConfig/test/DBPostgresPassword
+    NoEcho: true
+  #OrcidClientId:
+  #  Description: The ORCID client id
+  #  Type: AWS::SSM::Parameter::Value<String>
+  #  Default: /DeploymentConfig/test/OrcidClientId
+  #OrcidClientSecret:
+  #  Description: The ORCID client secret
+  #  Type: AWS::SSM::Parameter::Value<String>
+  #  Default: /DeploymentConfig/test/OrcidClientSecret
+  #  NoEcho: true
+  #OrcidUrl:
+  #  Description: The ORCID url
+  #  Type: AWS::SSM::Parameter::Value<String>
+  #  Default: /DeploymentConfig/test/OrcidUrl
+  #OrcidScope:
+  #  Description: The ORCID scope
+  #  Type: AWS::SSM::Parameter::Value<String>
+  #  Default: /DeploymentConfig/test/OrcidScope
+  #QuayClientId:
+  #  Description: The Quay Client id
+  #  Type: AWS::SSM::Parameter::Value<String>
+  #  Default: /DeploymentConfig/test/QuayClientId
+  #QuayClientSecret:
+  #  Description: The Quay Client secret
+  #  Type: AWS::SSM::Parameter::Value<String>
+  #  Default: /DeploymentConfig/test/QuayClientSecret
+  #  NoEcho: true
+  #SamPath:
+  #  Description: SAM base path
+  #  Type: AWS::SSM::Parameter::Value<String>
+  #  Default: /DeploymentConfig/test/SamPath
+  #SecretToken:
+  #  Description: The secret token used by GitHub lambda
+  #  Type: AWS::SSM::Parameter::Value<String>
+  #  Default: /DeploymentConfig/test/SecretToken
+  #  NoEcho: true
+  #SlackMediumPrioritySNSTopicName:
+  #  Description: Name of Amazon SNS Topic for sending medium priority alerts to a slack channel
+  #  Type: AWS::SSM::Parameter::Value<String>
+  #  Default: /DeploymentConfig/test/SlackMediumPrioritySNSTopicName
+  TagManagerId:
+    Description: The Google Tag Manager id
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /DeploymentConfig/test/TagManagerId
+  #TerraImportUrl:
+  #  Description: The Terra Import Url
+  #  Type: AWS::SSM::Parameter::Value<String>
+  #  Default: /DeploymentConfig/test/TerraImportUrl
+  ToolTesterBucketName:
+    Description: The Tool Tester bucket name
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /DeploymentConfig/test/ToolTesterBucketName
+  #ZenodoClientId:
+  #  Description: The Zenodo Client id
+  #  Type: AWS::SSM::Parameter::Value<String>
+  #  Default: /DeploymentConfig/test/ZenodoClientId
+  #ZenodoClientSecret:
+  #  Description: The Zenodo Client secret
+  #  Type: AWS::SSM::Parameter::Value<String>
+  #  Default: /DeploymentConfig/test/ZenodoClientSecret
+  #  NoEcho: true
+  #ZenodoUrl:
+  #  Description: The Zenodo url
+  #  Type: AWS::SSM::Parameter::Value<String>
+  #  Default: /DeploymentConfig/test/ZenodoUrl
+
+#System Level Parameters from Parameter Store
+#  CertificateArn:
+#    Description: The AWS Certificate Manager ARN
+#    Type: AWS::SSM::Parameter::Value<String>
+#    Default: /DeploymentConfig/test/LoadBalancerCertificateArn
+
+Mappings:
+  Regions:
+    #us-east-1:
+    #  ubuntu20ami: 'ami-0fa37863afb290840' # Ubuntu Focal 20.04-20210315
+    us-west-1:
+      ubuntu20ami: 'ami-043738bfa891187cc' # Ubuntu Focal 20.04-20210315
+    us-west-2:
+      ubuntu20ami: 'ami-043738bfa891187cc' # Ubuntu Focal 20.04-20210315
+    #us-east-2:
+    #  ubuntu20ami: 'ami-0fb653ca2d3203ac1' # Ubuntu Focal 20.04-20210315
+
+Conditions:
+  # We tear down LB nightly in , don't protect it.
+  EnableLbDeletionProtection: 
+    !Not [!Equals [ test, test]]
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "Configure the Dockstore Software Versions"
+        Parameters:
+          - AutoUpdate
+          - ComposeSetupVersion
+          - WebserviceTag
+          - UiVersion
+          #- GalaxyPluginVersion
+          #- DockstoreLambdaBucket
+          #- DockstoreLambdaKey
+      - Label:
+          default: "Other stacks"
+        Parameters:
+          - CoreStack
+          - S3Stack
+          - RdsStack
+      - Label:
+          default: "Provide EC2 Instance Details"
+        Parameters:
+          - InstanceType
+          - AvailabilityZone
+      - Label:
+          default: "Load Balancer Settings"
+        Parameters:
+          - LoadBalancerIdleTimeout
+      - Label:
+          default: "SSM Parameter Store Key Names that should typically not be changed"
+        Parameters:
+         # - BdCatalystSevenBridgesImportUrl
+         # - BdCatalystTerraImportUrl
+         # - BitbucketClientId
+         # - BitbucketClientSecret
+         # - CertificateArn
+         # - DiscourseCategoryId
+         # - DiscourseKey
+         # - DiscourseUrl
+         # - DocumentationUrl
+          - DomainName
+          - GitHubAppId
+          - GitHubAppName
+          - GitHubClientId
+          - GitHubClientSecret
+         # - GitLabClientId
+         # - GitLabClientSecret
+         # - GoogleClientId
+         # - GoogleClientSecret
+         # - QuayClientId
+         # - QuayClientSecret
+          - TagManagerId
+         # - TerraImportUrl
+         # - ZenodoClientId
+         # - ZenodoClientSecret
+         # - ZenodoUrl
+
+Resources:
+  #InstanceRole:
+  #  Type: "AWS::IAM::Role"
+  #  Properties:
+  #    AssumeRolePolicyDocument:
+  #      Version: "2012-10-17"
+  #      Statement:
+  #        Effect: Allow
+  #        Principal:
+  #          Service:
+  #            - "ec2.amazonaws.com"
+  #        Action: sts:AssumeRole
+  #    ManagedPolicyArns:
+  #      - arn:aws:iam::aws:policy/CloudWatchReadOnlyAccess
+  #      - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+  #      - arn:aws:iam::aws:policy/service-role/AWSAppSyncPushToCloudWatchLogs
+  #      - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+  #      - !Sub 'arn:aws:iam::$${AWS::AccountId}:policy/TooltesterGetLogs'
+  #      - Fn::ImportValue: !Sub '$${S3Stack}-StartupBucketManagedPolicy'
+  #      - !Sub 'arn:aws:iam::$${AWS::AccountId}:policy/ReadDeployBucketPolicy'
+  #      - !Sub 'arn:aws:iam::$${AWS::AccountId}:policy/SsmListAndTerminate'
+  #    Tags:
+  #      - Key: Name
+  #        Value: !Sub '$${AWS::StackName}-instance-role'
+  #      - Key: Environment
+  #        Value: ''
+
+  InstanceProfile:
+    Type: "AWS::IAM::InstanceProfile"
+    Properties:
+      Roles: 
+       - "DockstoreInstanceRole" 
+
+
+  DockstoreInstance:
+    Type: AWS::EC2::Instance
+    Metadata:
+      AWS::CloudFormation::Init:
+        configSets:
+          setup_dockstore:
+          - install_dockstore
+          - add_cron_job
+          setup_collectd:
+          - move_files
+          cw_agent_default:
+          - setup_cfn_hup
+          - config_cw_agent
+          - restart_cw_agent
+          cw_agent_update_environment:
+          - config_cw_agent
+          - restart_cw_agent
+          harden_server:
+          - config_sysctl
+          - empty_securetty
+        move_files:
+          files:
+              "/etc/collectd/collectd.conf":
+                content: !Sub |
+                  LoadPlugin curl_json
+                  LoadPlugin "logfile"
+                  LoadPlugin network
+                  TypesDB "/usr/share/collectd/types.db"
+                  <Plugin "logfile">
+                    LogLevel "info"
+                    File "/var/log/collectd.log"
+                    Timestamp true
+                  </Plugin>
+                  <Plugin curl_json>
+                    <URL "http://localhost:8081/metrics">
+                      Instance "jvm"
+                      Host "Dockstore"
+                      <Key "gauges/jvm.memory.heap.usage/value">
+                        Type "percent"
+                      </Key>
+                      <Key "gauges/io.dropwizard.db.ManagedPooledDataSource.hibernate.active/value">
+                        Type "gauge"
+                      </Key>
+                      <Key "gauges/io.dropwizard.db.ManagedPooledDataSource.hibernate.idle/value">
+                        Type "gauge"
+                      </Key>
+                    </URL>
+                  </Plugin>
+                  <Plugin network>
+                      Server "127.0.0.1" "25826"
+                  </Plugin>
+                mode: "644"
+                owner: root
+                group: root
+          commands:
+            01_run_collectd:
+              command: sudo service collectd restart
+        install_dockstore:
+          packages:
+            apt:
+              docker-ce: ["5:20.10.3~3-0~ubuntu-focal"]
+              ruby-mustache: ["1.0.2-1"]
+              jq: []
+              collectd-core: []
+              libyajl-: []
+          groups:
+            docker: {}
+          users:
+            ubuntu:
+              groups:
+                - docker
+          sources:
+            "/home/ubuntu/compose_setup": !Sub 'https://github.com/dockstore/compose_setup/tarball/$${ComposeSetupVersion}'
+            "/home/ubuntu/github-key": !Join
+              - ''
+              - - 'https://'
+                - Fn::ImportValue: !Sub '$${S3Stack}-S3BucketName'
+                - '.s3.'
+                - !Ref 'AWS::Region'
+                - '.amazonaws.com'
+                - '/bootstrap/jpl-uads-dockstore.2022-06-07.private-key.pem.tar.gz'
+          files:
+            "/home/ubuntu/compose_setup/dockstore_launcher_config/compose.config":
+              content: !Sub
+                - |
+                  {
+                  "AUTHORIZER_TYPE":"$${AuthorizerType}",
+                  "COMPOSE_SETUP_VERSION":"$${ComposeSetupVersion}",
+                  "DEPLOY_VERSION":"1.12.3",
+                  "DATABASE_DOMAIN":"$${DatabaseDomain}",
+                  "DOCKSTORE_DBPASSWORD":"$${DBDockstoreUserPassword}",
+                  "DOCKSTORE_VERSION":"$${WebserviceTag}",
+                  "DOMAIN_NAME":"$${DomainName}",
+                  "GITHUB_APP_ID":"$${GitHubAppId}",
+                  "GITHUB_APP_NAME":"$${GitHubAppName}",
+                  "GITHUB_APP_PRIVATE_KEY_FILE":"/home/ubuntu/github-key/jpl-uads-dockstore.2022-06-07.private-key.pem",
+                  "GITHUB_CLIENT2_ID":"$${GitHubClientId}",
+                  "GITHUB_CLIENT2_SECRET":"$${GitHubClientSecret}",
+                  "HTTPS": false,
+                  "LOGSTASH":false,
+                  "POSTGRES_DBPASSWORD":"$${DBPostgresPassword}",
+                  "PRODUCTION": false,
+                  "PUBLIC_LAUNCHER_IP_ADDRESS":"",
+                  "TAG_MANAGER_ID":"$${TagManagerId}",
+                  "TOOLTESTER_BUCKET_NAME":"$${ToolTesterBucketName}",
+                  "UI2_HASH":"$${UiVersion}"
+                  }
+                - DatabaseDomain:
+                    Fn::ImportValue:
+                     !Sub "$${RdsStack}-DBAddress"
+          commands:
+            # Commands are executed alphabetically
+            "01_change_owner":
+              command: chown -R ubuntu:ubuntu compose_setup github-key
+              cwd: "/home/ubuntu"
+            "02_build":
+              command: sudo -u ubuntu bash install_bootstrap --script
+              cwd: "/home/ubuntu/compose_setup"
+            "03_recreate":
+              cwd: "/home/ubuntu/compose_setup"
+              command: sudo -u ubuntu nohup docker-compose up --force-recreate --remove-orphans -d &
+        add_cron_job:
+          files:
+            "/home/ubuntu/updateDockstore.sh":
+              content: !Sub |
+                #!/bin/bash
+
+                # 1. Determines the latest UI version on CloudFront
+                # 2. Updates dockstore_launcher_config/compose.config with the latest UI version
+                # 3. Brings down docker-compose
+                # 4. Deletes the elop web service image, because that is a "floating tag"
+                # 5. Brings up docker-compose, which should pull the latest web service and point
+                #    to the latest UI.
+
+                # TODO
+                #
+                # 1. Should be smart enough not to update if nothing has changed
+                # 2. Shouldn't assume elop branch, e.g., if I have an instance for my own branch, this will switch it develop
+
+                cd /home/ubuntu/compose_setup
+
+                # A global variable given that you can't return strings from functions in BASH
+                UI_VERSION=
+
+                # Find the latest commit on elop that is on CDN (latest commit may not yet be on CDN)
+                getLatestUiOnDevelop () {
+                    UI_SHA=$(curl -s https://api.github.com/repos/dockstore/dockstore-ui2/commits?sha=elop | jq -c -r  '.[] | .sha' | cut -c -7)
+                    for sha in $UI_SHA
+                    do
+                        $(curl -sf https://gui.dockstore.org/elop-$sha/index.html > /test/null)
+                        if [ $? -eq 0 ]
+                        then
+                           UI_VERSION="elop-$sha"
+                           return 0
+                        fi
+                    done
+                    return 1
+                }
+
+
+                getLatestUiOnDevelop
+                NEW_UI2_HASH="\"UI2_HASH\":\"$UI_VERSION\""
+                OLD_UI2_HASH="\"UI2_HASH\":\".*\""
+                sed -i "s/$OLD_UI2_HASH/$NEW_UI2_HASH/" dockstore_launcher_config/compose.config
+
+                docker-compose down
+
+                # Because elop is a floating tag, remove the local image
+                docker image rm quay.io/dockstore/dockstore-webservice:$${WebserviceTag}
+
+                # Regenerate config files from templates
+                bash install_bootstrap --script
+
+                # Bring it back up
+                nohup docker-compose up --force-recreate --remove-orphans &
+              mode: "774"
+              owner: ubuntu
+              group: ubuntu
+            "/tmp/dockstoreCronTab":
+              # 1. Empty line in the content on purpose; some crontab require a new line at the end
+              # 2. 6 is 3am eastern, midnight pacific
+              # 3. Probably not the right place for the logs
+              content: |
+                PATH=/usr/bin:/bin::/usr/local/bin
+                0 6 * * * /home/ubuntu/updateDockstore.sh >> /home/ubuntu/logs/updateDockstore.cron.log 2>&1
+
+              owner: ubuntu
+              group: ubuntu
+              mode: "644"
+            "/tmp/addUpdateDockstoreCronTab.sh":
+                content: !Sub |
+                  #!/bin/bash
+                  set -o errexit
+                  set -o nounset
+                  set -o pipefail
+                  if [ "true" == "$${AutoUpdate}" ]; then
+                    sudo -u ubuntu crontab /tmp/dockstoreCronTab
+                  else
+                    # Remove the temptation to run this file
+                    rm /home/ubuntu/updateDockstore.sh
+                  fi
+                mode: "774"
+                owner: ubuntu
+                group: ubuntu
+          commands:
+            # Commands are executed alphabetically
+            "01_create_logs_directory":
+              command: sudo -u ubuntu mkdir logs
+              cwd: "/home/ubuntu"
+            "02_add_cron_job":
+              command: /tmp/addUpdateDockstoreCronTab.sh
+        config_cw_agent:
+          files:
+            "/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json":
+              content: !Sub |
+                {
+                  "agent": {
+                    "metrics_collection_interval": 300,
+                    "run_as_user": "root"
+                  },
+                  "logs": {
+                    "logs_collected": {
+                      "files": {
+                        "collect_list": [
+                          {
+                            "file_path": "/var/log/awsagent-update.log",
+                            "log_group_name": "awsagent-update.log",
+                            "log_stream_name": "$${DomainName}-$${AWS::StackName}"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "metrics": {
+                    "append_dimensions": {
+                      "ImageId": "$${!aws:ImageId}",
+                      "InstanceId": "$${!aws:InstanceId}",
+                      "InstanceType": "$${!aws:InstanceType}",
+                      "Environment": "$${DomainName}"
+                    },
+                    "metrics_collected": {
+                      "collectd":{
+                        "name_prefix":"collectd_metrics_",
+                        "metrics_aggregation_interval":120,
+                        "collectd_security_level": "none",
+                        "service_address": "udp://127.0.0.1:25826"
+                      },
+                      "disk": {
+                        "measurement": [
+                          {
+                            "name": "free",
+                            "unit": "Gigabytes"
+                          },
+                          "used_percent"
+                        ],
+                        "metrics_collection_interval": 300,
+                        "ignore_file_system_types": [
+                          "tmpfs",
+                          "overlay",
+                          "squashfs",
+                          "tmpfs"
+                        ]
+                      },
+                      "mem": {
+                        "measurement": [
+                          "mem_used_percent"
+                        ]
+                      },
+                      "diskio": {
+                        "measurement": [
+                          "io_time"
+                        ],
+                        "metrics_collection_interval": 600,
+                        "resources": [
+                          "xvda",
+                          "xvda1"
+                        ]
+                      },
+                      "swap": {
+                        "measurement": [
+                          "swap_used_percent"
+                        ],
+                        "metrics_collection_interval": 600
+                      }
+                    }
+                  }
+                }
+        # Invoke amazon-cloudwatch-agent-ctl to restart the AmazonCloudWatchAgent.
+        restart_cw_agent:
+          commands:
+            01_stop_service:
+              command: /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a stop
+            02_start_service:
+              command: /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json -s
+        # Cfn-hup setting, it is to monitor the change of metadata.
+        # When there is change in the contents of json file in the metadata section, cfn-hup will call cfn-init to restart the AmazonCloudWatchAgent.
+        setup_cfn_hup:
+          files:
+            "/etc/cfn/cfn-hup.conf":
+              content: !Sub |
+                [main]
+                stack=$${AWS::StackId}
+                region=$${AWS::Region}
+                interval=1
+              mode: '000400'
+              owner: root
+              group: root
+            "/etc/cfn/hooks.d/amazon-cloudwatch-agent-auto-reloader.conf":
+              content: !Sub |
+                [cfn-auto-reloader-hook]
+                triggers=post.update
+                path=Resources.DockstoreInstance.Metadata.AWS::CloudFormation::Init.config_cw_agent
+                action=/usr/local/bin/cfn-init -v --stack $${AWS::StackId} --resource DockstoreInstance --region $${AWS::Region} --configsets cw_agent_update_environment
+                runas=root
+              mode: '000400'
+              owner: root
+              group: root
+            "/lib/systemd/system/cfn-hup.service":
+              content: |
+                [Unit]
+                Description=cfn-hup daemon
+                [Service]
+                Type=simple
+                ExecStart=/usr/local/bin/cfn-hup
+                Restart=always
+                [Install]
+                WantedBy=multi-user.target
+          commands:
+            01_enable_cfn_hup:
+              command: systemctl enable cfn-hup.service
+            02_start_cfn_hup:
+              command: systemctl start cfn-hup.service
+        config_sysctl:
+          commands:
+            01_config_sysctl_all_disable_redirects:
+              command: echo "net.ipv4.conf.all.accept_redirects = 0" >> /etc/sysctl.conf
+            02_config_sysctl_default_disable_redirects:
+              command: echo "net.ipv4.conf.default.accept_redirects = 0" >> /etc/sysctl.conf
+            03_config_sysctl_all_disable_secure_redirects:
+              command: echo "net.ipv4.conf.all.secure_redirects = 0" >> /etc/sysctl.conf
+            04_config_sysctl_default_disable_secure_redirects:
+              command: echo "net.ipv4.conf.default.secure_redirects = 0" >> /etc/sysctl.conf
+            05_config_sysctl_syncookies:
+              command: echo "net.ipv4.tcp_syncookies = 1" >> /etc/sysctl.conf
+            06_config_sysctl_reload:
+              command: sysctl -p
+        empty_securetty:
+          commands:
+            # This will restrict root access to single user mode (does not affect SSH)
+            01_empty_securetty_doit:
+              command: cat /test/null > /etc/securetty
+      AWS::CloudFormation::Authentication:
+        rolebased:
+          type: S3
+          buckets:
+            Fn::ImportValue: !Sub '$${S3Stack}-S3BucketName'
+          roleName: DockstoreInstanceRole
+    Properties:
+      AvailabilityZone: !Ref AvailabilityZone
+      ImageId: !FindInMap
+        - Regions
+        - !Ref 'AWS::Region'
+        - ubuntu20ami
+      InstanceType: !Ref InstanceType
+      IamInstanceProfile: !Ref InstanceProfile
+      BlockDeviceMappings:
+        - DeviceName: "/dev/sda1"
+          Ebs:
+            VolumeSize: 20
+            # Setting this flag encypts the volume the next time it is created
+            # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ec2-block-template.html#cfn-ec2-blockdev-template-encrypted
+            # We could also set the account settings to encrypt any EBS Volume
+            # by default https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSEncryption.html#encryption-by-default
+            Encrypted: true
+      SecurityGroupIds:
+        - !Ref DockstoreServerSecurityGroup
+      SubnetId: subnet-04af313ddac6a1b3b
+      Monitoring: true
+      Tags:
+        - Key: Name
+          Value: !Sub '$${AWS::StackName}-instance'
+        - Key: Environment
+          Value: ''
+        - Key: Type
+          Value: "Dockstore"
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash -xe
+
+          # Update and upgrade software before anything else
+          # (This does not handle the case of a reboot being required)
+          DEBIAN_FRONTEND=noninteractive apt-get -qq -y update
+          # Use the --with-new-pkgs flag to force aws-linux and friends to update as well
+          DEBIAN_FRONTEND=noninteractive apt-get -qq -y --with-new-pkgs upgrade
+
+          # Disable all services that automatically update software
+          systemctl disable apt-daily.timer
+          systemctl stop apt-daily.timer
+          systemctl mask apt-daily.service
+          systemctl disable apt-daily-upgrade.timer
+          systemctl stop apt-daily-upgrade.timer
+          systemctl mask apt-daily-upgrade.service
+          systemctl disable packagekit
+          systemctl stop packagekit
+          systemctl mask packagekit.service
+          systemctl daemon-reload
+          # Download CloudWatch Agent
+          # https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/install-CloudWatch-Agent-commandline-fleet.html
+          wget --quiet https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/1.247347.6b250880/amazon-cloudwatch-agent.deb -O /tmp/amazon-cloudwatch-agent.deb
+          dpkg -i -E /tmp/amazon-cloudwatch-agent.deb
+
+          # Install python3 and pip3
+          apt-get -qq -y install python3-pip
+
+          # Install cfn-bootstrap
+          wget --quiet https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-py3-2.0-6.tar.gz -O /root/aws-cfn-bootstrap.tar.gz 
+          tar xzf /root/aws-cfn-bootstrap.tar.gz -C /root
+          pip3 install /root/aws-cfn-bootstrap.tar.gz
+
+          # Set up cfn-hup
+          ln -s /root/aws-cfn-bootstrap-2.0/init/ubuntu/cfn-hup /etc/init.d/cfn-hup
+          chmod 700 /etc/init.d/cfn-hup
+
+          # Set up docker and docker-compose
+          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+          add-apt-repository \
+            "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+            $(lsb_release -cs) \
+            stable"
+          apt-get update
+          curl -L "https://github.com/docker/compose/releases/download/1.24.1/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          chmod ugo+x /usr/local/bin/docker-compose
+          # Up the vm.max_map_count for ElasticSearch
+          echo "vm.max_map_count=262144" >> /etc/sysctl.conf
+          # Reads from /etc/sysctl.conf
+          sysctl -p
+          # Install aws cli here, so it will be available for SSM associations
+          sudo -u ubuntu curl -s "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
+          apt-get -y install unzip
+          unzip -q /tmp/awscliv2.zip -d /tmp
+          /tmp/aws/install
+          rm -f /tmp/awscliv2.zip
+          rm -fr /tmp/aws
+          # Set hostname (persistent)
+          echo -n "Dockstore--$${AWS::StackName}" > /etc/hostname
+          # Set hostname (does not require reboot)
+          hostnamectl set-hostname "Dockstore--$${AWS::StackName}"
+          # Set hostname for interactive shells
+          hostnamectl set-hostname "Dockstore--$${AWS::StackName}" --pretty
+          echo "PermitRootLogin no" >> /etc/ssh/sshd_config
+          systemctl restart ssh
+
+          /usr/local/bin/cfn-init -v --stack $${AWS::StackName} --resource DockstoreInstance --configsets setup_dockstore,setup_collectd,cw_agent_default,harden_server --region $${AWS::Region}
+          /usr/local/bin/cfn-signal -e $? --stack $${AWS::StackId} --resource DockstoreInstance --region $${AWS::Region}
+
+  #PoolExhaustedException:
+  #  Type: AWS::CloudWatch::Alarm
+  #  Properties:
+  #    AlarmName: !Sub 'awssec2-$${DockstoreInstance}-PoolExhaustedException-reboot-trigger'
+  #    AlarmActions:
+  #      - !Sub 'arn:aws:sns:$${AWS::Region}:$${AWS::AccountId}:$${SlackMediumPrioritySNSTopicName}'
+  #      - !Sub arn:aws:automate:$${AWS::Region}:ec2:reboot
+  #    MetricName: PoolExhaustedException Count
+  #    Namespace: !Sub '$${DomainName}_LogMetrics'
+  #    ComparisonOperator: GreaterThanThreshold
+  #    Threshold: 0
+  #    Period: 60
+  #    EvaluationPeriods: 1
+  #    Statistic: Sum
+  #    TreatMissingData: notBreaching
+  #    Dimensions:
+  #      - Name: InstanceId
+  #        Value: !Ref DockstoreInstance
+
+  #CPUUtilizationRebootTriggerAlarm:
+  #  Type: AWS::CloudWatch::Alarm
+  #  Properties:
+  #    AlarmName: !Sub 'awssec2-$${DockstoreInstance}-CPU-Utilization-reboot-trigger'
+  #    AlarmDescription: Notifies Slack when CPU usage >= 50% within 15 minutes
+  #    AlarmActions:
+  #      # Temporarily set mustache delimiter to <% %> to use AWS resolve syntax and then change delimiter back to curly braces
+  #      - !Sub 'arn:aws:sns:$${AWS::Region}:$${AWS::AccountId}:{{resolve:ssm:/DeploymentConfig/test/SlackMediumPrioritySNSTopicName:1}}'
+  #      - !Sub arn:aws:automate:$${AWS::Region}:ec2:reboot
+  #    MetricName: CPUUtilization
+  #    Namespace: AWS/EC2
+  #    ComparisonOperator: GreaterThanOrEqualToThreshold
+  #    Threshold: 50
+  #    Period: 300
+  #    EvaluationPeriods: 3
+  #    DatapointsToAlarm: 3
+  #    Statistic: Average
+  #    TreatMissingData: missing
+  #    Dimensions:
+  #      - Name: InstanceId
+  #        Value: !Ref DockstoreInstance
+  #ActiveDBConnectionsAlarm:
+  #  Type: 'AWS::CloudWatch::Alarm'
+  #  Properties:
+  #    MetricName: collectd_metrics_curl_json_value
+  #    Namespace: CWAgent
+  #    ComparisonOperator: GreaterThanThreshold
+  #    EvaluationPeriods: 1
+  #    Period: 60
+  #    Statistic: Average
+  #    Threshold: 30
+  #    AlarmActions:
+  #      # Temporarily set mustache delimiter to <% %> to use AWS resolve syntax and then change delimiter back to curly braces
+  #      - !Sub 'arn:aws:sns:$${AWS::Region}:$${AWS::AccountId}:{{resolve:ssm:/DeploymentConfig/test/SlackMediumPrioritySNSTopicName:1}}'
+  #    AlarmDescription: When the number of Dropwizard Hibernate active connections exceed threshold
+  #    AlarmName: !Sub '$${AWS::StackName}-$${DockstoreInstance}-Active-DB-Connections-Alarm'
+  #    Dimensions:
+  #      - Name: type_instance
+  #        Value: gauges-io.dropwizard.db.ManagedPooledDataSource.hibernate.active-value
+  #      - Name: type
+  #        Value: gauge
+  #      - Name: instance
+  #        Value: jvm
+  #      - Name: ImageId
+  #        Value:
+  #          Fn::FindInMap:
+  #            - Regions
+  #            - Ref: "AWS::Region"
+  #            - ubuntu20ami
+  #      - Name: InstanceType
+  #        Value: !Ref InstanceType
+  #      - Name: InstanceId
+  #        Value: !Ref DockstoreInstance
+  #CPUAlarm:
+  #  Type: AWS::CloudWatch::Alarm
+  #  Properties:
+  #    AlarmName: !Sub '$${AWS::StackName}-$${DockstoreInstance}-CPU-Alarm'
+  #    AlarmDescription: Notifies Slack when CPU usage is >= 90% within 10 minutes.
+  #    AlarmActions:
+  #      - !Sub 'arn:aws:sns:$${AWS::Region}:$${AWS::AccountId}:{{resolve:ssm:/DeploymentConfig/test/SlackMediumPrioritySNSTopicName:1}}'
+  #    MetricName: CPUUtilization
+  #    Namespace: AWS/EC2
+  #    ComparisonOperator: GreaterThanOrEqualToThreshold
+  #    Threshold: 90
+  #    Period: 300
+  #    EvaluationPeriods: 2
+  #    DatapointsToAlarm: 2
+  #    Statistic: Average
+  #    TreatMissingData: missing
+  #    Dimensions:
+  #      - Name: InstanceId
+  #        Value: !Ref DockstoreInstance
+
+  # Note: All EC2 instances (Deployer, Grafana, Dockstore, RDS Jump) have this alarm so this alarm should not be modified independently. It will be collapsed into the CDK approach later.
+  # PR that added the alarm: https://github.com/dockstore/dockstore-deploy/pull/374
+  #CPUCreditBalanceAlarm:
+  #  Type: AWS::CloudWatch::Alarm
+  #  Properties:
+  #    AlarmName: !Sub '$${AWS::StackName}-$${DockstoreInstance}-CPU-Credit-Balance-Alarm'
+  #    AlarmDescription: Send an alert when the CPU Credit Balance is 0.
+  #    AlarmActions:
+  #      - !Sub 'arn:aws:sns:$${AWS::Region}:$${AWS::AccountId}:$${SlackMediumPrioritySNSTopicName}'
+  #    MetricName: CPUCreditBalance
+  #    Namespace: AWS/EC2
+  #    ComparisonOperator: LessThanOrEqualToThreshold
+  #    Threshold: 0
+  #    Period: 300
+  #    EvaluationPeriods: 1
+  #    Statistic: Average
+  #    TreatMissingData: notBreaching
+  #    Dimensions:
+  #      - Name: InstanceId
+  #        Value: !Ref DockstoreInstance
+  #LambdaErrorsTimeoutsAlarm:
+  #  Type: AWS::CloudWatch::Alarm
+  #  Properties:
+  #    AlarmName: !Sub '$${AWS::StackName}-$${DockstoreInstance}-Lambda-Errors-Timeouts'
+  #    AlarmDescription: send a slack alert when lambda errors/timeouts exceed threshold
+  #    AlarmActions:
+  #      - !Sub 'arn:aws:sns:$${AWS::Region}:$${AWS::AccountId}:$${SlackMediumPrioritySNSTopicName}'
+  #    MetricName: Errors
+  #    Namespace: AWS/Lambda
+  #    Dimensions:
+  #      - Name: FunctionName
+  #        Value: !Ref GitHubQueueLambda
+  #    ComparisonOperator: GreaterThanThreshold
+  #    Threshold: 5
+  #    Period: 60
+  #    EvaluationPeriods: 1
+  #    Statistic: Sum
+  #    TreatMissingData: notBreaching
+
+
+  # our EC2 security group
+  DockstoreServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable TCP access from LoadBalancer to ports 80
+      SecurityGroupIngress:
+        - Description: Allow inbound traffic from the load balancer to the EC2 instance on port 80
+          SourceSecurityGroupId: !Ref LbSecurityGroup
+          ToPort: 80
+          FromPort: 80
+          IpProtocol: tcp
+        - Description: Allow inbound traffic from the load balancer to on port 9998
+          SourceSecurityGroupId: !Ref LbSecurityGroup
+          ToPort: 9998
+          FromPort: 9998
+          IpProtocol: tcp
+        - Description: Allow inbound traffic from Load Balancer on port 9999
+          SourceSecurityGroupId: !Ref LbSecurityGroup
+          ToPort: 9999
+          FromPort: 9999
+          IpProtocol: tcp
+      SecurityGroupEgress:
+        - Description: Allow outbound http traffic (for aptitude) - see SEAB-3387
+          CidrIp: 0.0.0.0/0
+          ToPort: 80
+          FromPort: 80
+          IpProtocol: tcp
+        - Description: Allow outbound https traffic for Webservice functionality and AWS Service endpoints
+          CidrIp: 0.0.0.0/0
+          ToPort: 443
+          FromPort: 443
+          IpProtocol: tcp
+        - Description: Allow outbound https traffic for Webservice functionality and AWS Service endpoints
+          CidrIp: 0.0.0.0/0
+          ToPort: 9999
+          FromPort: 9999
+          IpProtocol: tcp
+        - Description: Allow outbound https traffic for Webservice functionality and AWS Service endpoints
+          CidrIp: 0.0.0.0/0
+          ToPort: 9998
+          FromPort: 9998
+          IpProtocol: tcp
+        - Description: Allow outbound traffic to PostgreSQL
+          DestinationSecurityGroupId:
+            Fn::ImportValue: !Sub '$${RdsStack}-DBSecurityGroup'
+          ToPort: 5432
+          FromPort: 5432
+          IpProtocol: tcp
+        - Description: Allow outbound NTP traffic
+          CidrIp: 0.0.0.0/0
+          ToPort: 123
+          FromPort: 123
+          IpProtocol: udp
+      VpcId: "vpc-0333cdc921d05f54f"
+      Tags:
+        - Key: Name
+          Value: !Sub '$${AWS::StackName}-sg'
+        - Key: Environment
+          Value: 'test'
+
+  # Modify the RDS security group to add ingress rules allowing traffic from Dockstore instance SG
+  DockstoreRdsSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Ingress rule to allow traffic from Dockstore instance SG to RDS SG
+      FromPort: 5432
+      ToPort: 5432
+      IpProtocol: tcp
+      GroupId:
+        Fn::ImportValue: !Sub '$${RdsStack}-DBSecurityGroup'
+      SourceSecurityGroupId: !Ref DockstoreServerSecurityGroup
+ 
+  #Modify the ES security group to add ingress rules allowing traffic from Dockstore instance SG
+  DockstoreElasticsearchSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Ingress rule to allow traffic from Dockstore instance SG to Elasticsearch SG
+      FromPort: 80
+      ToPort: 80
+      IpProtocol: tcp
+      GroupId:
+        Fn::ImportValue: !Sub '$${ElasticsearchStack}-ESSecurityGroup'
+      SourceSecurityGroupId: !Ref DockstoreServerSecurityGroup
+
+  # Lambdas
+
+  #GitHubLambdaRole:
+  #  Type: AWS::IAM::Role
+  #  Properties:
+  #    AssumeRolePolicyDocument:
+  #      Version: "2012-10-17"
+  #      Statement:
+  #        Effect: Allow
+  #        Principal:
+  #          Service:
+  #            - "lambda.amazonaws.com"
+  #        Action: sts:AssumeRole
+  #    Path: "/"
+  #    Policies:
+  #      - PolicyName: AWSLambdasBasicExecutionRole
+  #        PolicyDocument:
+  #          Statement:
+  #            - Effect: Allow
+  #              Action:
+  #                - logs:CreateLogGroup
+  #                - logs:CreateLogStream
+  #                - logs:PutLogEvents
+  #              Resource: "*"
+  #      - PolicyName: allowSqs
+  #        PolicyDocument:
+  #          Version: '2012-10-17'
+  #          Statement:
+  #          - Effect: Allow
+  #            Action:
+  #            - sqs:ReceiveMessage
+  #            - sqs:DeleteMessage
+  #            - sqs:GetQueueAttributes
+  #            - sqs:ChangeMessageVisibility
+  #            Resource: !Join
+  #              - ''
+  #              - - 'arn:aws:sqs:'
+  #                - !Ref 'AWS::Region'
+  #                - ':'
+  #                - !Ref 'AWS::AccountId'
+  #                - ':'
+  #                - Fn::ImportValue: !Sub '$${CoreStack}-WebhookQueueName'
+  #          - Effect: Allow
+  #            Action: sqs:SendMessage
+  #            Resource: !GetAtt 'GitHubLambdaDeadQueue.Arn'
+  #    Tags:
+  #      - Key: Name
+  #        Value: !Sub '$${AWS::StackName}-lambda-github'
+  #      - Key: Environment
+  #        Value: ''
+
+  #GitHubQueueLambda:
+  #  Type: AWS::Lambda::Function
+  #  Properties:
+  #    Description: A lambda that invokes the Dockstore API with GitHub updates
+  #    FunctionName: !Sub 'upsertGithubPush-$${AWS::StackName}'
+  #    Handler: index.handler
+  #    DeadLetterConfig:
+  #      TargetArn: !GetAtt 'GitHubLambdaDeadQueue.Arn'
+  #    Environment:
+  #      Variables:
+  #        DOCKSTORE_TOKEN: !Ref DockstoreToken
+  #        API_URL: !Ref DockstoreApiUrl
+  #        SECRET_TOKEN: !Ref SecretToken
+  #    Code:
+  #      S3Bucket: !Ref DockstoreLambdaBucket
+  #      S3Key: !Ref DockstoreLambdaKey
+  #    ReservedConcurrentExecutions: !Ref DockstoreLambdaMaxConcurrency
+  #    Role: !GetAtt 'GitHubLambdaRole.Arn'
+  #    Runtime: nodejs14.x
+  #    Timeout: 900
+  #    Tags:
+  #      - Key: Name
+  #        Value: !Sub '$${AWS::StackName}-lambda-github-queue'
+  #      - Key: Environment
+  #        Value: ''
+
+  #GitHubLambdaDeadQueue:
+  #  Type: AWS::SQS::Queue
+  #  Properties:
+  #    QueueName: !Sub 'upsertGithubPush-$${AWS::StackName}-dead'
+  #    DelaySeconds: 2
+  #    MessageRetentionPeriod: 1209600
+  #    ReceiveMessageWaitTimeSeconds: 20
+  #    VisibilityTimeout: 3600
+  #    KmsMasterKeyId: "alias/aws/sqs"
+  #    Tags:
+  #      - Key: Name
+  #        Value: !Sub '$${AWS::StackName}-github-lambda-dead-queue'
+  #      - Key: Environment
+  #        Value: ''
+
+  #LambdaFunctionEventSourceMapping:
+  #  Type: AWS::Lambda::EventSourceMapping
+  #  Properties:
+  #    BatchSize: 1
+  #    Enabled: true
+  #    EventSourceArn: !Join
+  #      - ''
+  #      - - 'arn:aws:sqs:'
+  #        - !Ref 'AWS::Region'
+  #        - ':'
+  #        - !Ref 'AWS::AccountId'
+  #        - ':'
+  #        - Fn::ImportValue: !Sub '$${CoreStack}-WebhookQueueName'
+  #    FunctionName: !GetAtt GitHubQueueLambda.Arn
+
+  # Target group in front of the Dockstore instance, allows it to receive traffic from the load balancer via port 80
+  TargetGroupPort80:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckEnabled: true
+      HealthCheckIntervalSeconds: 30
+      HealthCheckPath: /
+      HealthyThresholdCount: 5
+      UnhealthyThresholdCount: 2
+      # Careful, name can be a max of 32 characters! One long stack name: Dockstore-1-11-0-beta-1
+      Name: !Sub '$${AWS::StackName}-80'
+      Port: 80
+      Protocol: HTTP
+      VpcId: "vpc-0333cdc921d05f54f"
+      Targets:
+        - Id: !Ref DockstoreInstance
+          Port: 80
+
+  # Target group in front of the Dockstore instance, allows it to receive traffic from the load balancer via port 80
+  TargetGroupPort8080:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckEnabled: true
+      HealthCheckIntervalSeconds: 30
+      HealthCheckPath: /
+      HealthyThresholdCount: 5
+      UnhealthyThresholdCount: 2
+      # Careful, name can be a max of 32 characters! One long stack name: Dockstore-1-11-0-beta-1
+      Name: !Sub '$${AWS::StackName}-8080'
+      Port: 8080
+      Protocol: HTTP
+      VpcId: "vpc-0333cdc921d05f54f"
+      Targets:
+        - Id: !Ref DockstoreInstance
+          Port: 8080
+
+
+
+  # A security group for the load balancer which allows incoming traffic on ports 80, 443,
+  # and outgoing traffic on port 80, where incoming is from the internets
+  # and outgoing is to our EC2 instances.
+  LbSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allows inbound on ports 80, 443, from all IP address. Allows all outbound to EC2 on port 80.
+      GroupName: !Sub 'lb-security-group-https-$${AWS::StackName}'
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 9998
+          ToPort: 9998
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 9999
+          ToPort: 9999
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 9998
+          ToPort: 9998
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 9999
+          ToPort: 9999
+          CidrIp: 0.0.0.0/0
+      VpcId: "vpc-0333cdc921d05f54f"
+      Tags:
+        - Key: Name
+          Value: !Sub '$${AWS::StackName}-sg-lb-80-443'
+        - Key: Environment
+          Value: 'test'
+
+  # Security group to allow Grafana traffic to pass through the load balancer.
+  # Authorized access is IP-based, elopers must allow-list their specific IP addresses.
+  #LbGrafanaSecurityGroup:
+  #  Type: AWS::EC2::SecurityGroup
+  #  Properties:
+  #    GroupDescription: Security group on the load balancer that allows Grafana traffic to pass through the load balancer
+  #    GroupName: !Sub 'lb-security-group-grafana-$${AWS::StackName}'
+  #    SecurityGroupIngress:
+  #      - IpProtocol: tcp
+  #        FromPort: 3000
+  #        ToPort: 3000
+  #        CidrIp: 10.11.12.13/32
+  #    VpcId:
+  #      Fn::ImportValue: !Sub '$${CoreStack}-VpcId'
+  #    Tags:
+  #      - Key: Name
+  #        Value: !Sub '$${AWS::StackName}-sg-lb-3000'
+  #      - Key: Environment
+  #        Value: ''
+
+  # An application load balancer
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      IpAddressType: ipv4
+      LoadBalancerAttributes:
+        - Key: "idle_timeout.timeout_seconds"
+          Value: !Ref LoadBalancerIdleTimeout
+        - Key: "access_logs.s3.enabled"
+          Value: 'false'
+        #- Key: "access_logs.s3.bucket"
+        #  Value:
+        #    Fn::ImportValue: !Sub '$${S3Stack}-ElbLogsBucket'
+        - Key: "deletion_protection.enabled"
+          Value:
+            !If [EnableLbDeletionProtection, 'true', 'false']
+      Name: !Sub '$${AWS::StackName}-lb'
+      Scheme: internet-facing
+      SecurityGroups:
+        - !Ref LbSecurityGroup
+      #  - !Ref LbGrafanaSecurityGroup
+      Subnets:
+         - subnet-0ca61daf80bc568d9
+         - subnet-030bf5e7eab6f2323
+      Type: application
+      Tags:
+        - Key: Name
+          Value: !Sub '$${AWS::StackName}-lb'
+        - Key: Environment
+          Value: 'test'
+
+  WebACLAssociation:
+    Type: AWS::WAFv2::WebACLAssociation
+    DependsOn:
+      - LoadBalancer
+    Properties:
+      ResourceArn: !Ref LoadBalancer
+      WebACLArn:
+        Fn::ImportValue:
+          !Sub '$${CoreStack}-WebACLArn'
+
+  #Listen on port 9998 and redirect to port 80 on EC2
+  LbPort9998Listener:
+    Type: 'AWS::ElasticLoadBalancingV2::Listener'
+    Properties:
+      #Certificates:
+      #  - CertificateArn: !Ref CertificateArn
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroupPort80
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 9998
+      Protocol: HTTP
+      #SslPolicy: ELBSecurityPolicy-TLS-1-2-Ext-2018-06
+ 
+  #Listen on port 9999 and redirect to port 8080 on EC2
+  LbPort9999Listener:
+    Type: 'AWS::ElasticLoadBalancingV2::Listener'
+    Properties:
+      #Certificates:
+      #  - CertificateArn: !Ref CertificateArn
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroupPort8080
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 9999
+      Protocol: HTTP
+      #SslPolicy: ELBSecurityPolicy-TLS-1-2-Ext-2018-06
+
+  #Listen on port 80 and redirect to port 80 on EC2
+  LbPort80Listener:
+    Type: 'AWS::ElasticLoadBalancingV2::Listener'
+    Properties:
+      #Certificates:
+      #  - CertificateArn: !Ref CertificateArn
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroupPort80
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 80
+      Protocol: HTTP
+      #SslPolicy: ELBSecurityPolicy-TLS-1-2-Ext-2018-06
+ 
+
+  # Listen on port 80 and redirect to port 443 on the the same LB
+  #LbHttpToHttpsListener:
+  #  Type: 'AWS::ElasticLoadBalancingV2::Listener'
+  #  Properties:
+  #    DefaultActions:
+  #      - Type: redirect
+  #        RedirectConfig:
+  #          Protocol: "HTTPS"
+  #          Port: '443'
+  #          Host: "#{host}"
+  #          Path: "/#{path}"
+  #          Query: "#{query}"
+  #          StatusCode: "HTTP_301"
+  #    LoadBalancerArn: !Ref LoadBalancer
+  #    Port: 80
+  #    Protocol: HTTP
+
+Outputs:
+  LoadBalancerDNSName:
+    Description: The DNSName of the load balancer; use it in Route53
+    Value: !GetAtt LoadBalancer.DNSName
+  LBSecurityGroup:
+    Description: The Load Balancer's security group
+    Value: !Ref LbSecurityGroup
+    Export:
+      Name: !Sub '$${AWS::StackName}-LBSecurityGroup'
+  #LBGrafanaSecurityGroup:
+  #  Description: The Load Balancer's Grafana security group
+  #  Value: !Ref LbGrafanaSecurityGroup
+  #  Export:
+  #    Name: !Sub '$${AWS::StackName}-LBGrafanaSecurityGroup'
+  LoadBalancer:
+    Description: The load balancer
+    Value: !Ref LoadBalancer
+    Export:
+      Name: !Sub '$${AWS::StackName}-LoadBalancer'
+  LoadBalancerFullName:
+    Description: The full name of the load balancer, used by Grafana
+    Value: !GetAtt LoadBalancer.LoadBalancerFullName
+    Export:
+      Name: !Sub '$${AWS::StackName}-LoadBalancerFullName'
+  TargetGroupFullName:
+    Description: The full name of the target group, used by Grafana
+    Value: !GetAtt TargetGroupPort80.TargetGroupFullName
+    Export:
+      Name: !Sub '$${AWS::StackName}-TargetGroupFullName'
+

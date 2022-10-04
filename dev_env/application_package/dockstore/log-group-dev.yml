@@ -1,0 +1,560 @@
+# Commit: db4678a https://github.com/dockstore/dockstore-deploy/commits/db4678a
+# Template for creating a log group.
+# It is expected that this will only be run once for an environment
+Description: >
+  Manages a log group and the metric filters for that log group.
+
+Parameters:
+  LogGroupName:
+    Description: The name of the log group, which equals the domain
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /DeploymentConfig/test/DomainName
+
+  CloudTrailLogGroupName:
+    Description: The name of the CloudTrail log group
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /DeploymentConfig/test/CloudTrailLogGroupName
+
+Resources:
+  LogGroup:
+      DeletionPolicy: Retain
+      Type: AWS::Logs::LogGroup
+      Properties:
+        LogGroupName: !Ref LogGroupName
+
+  # Metric filters for the log group created. These will be displayed as CloudWatch metrics.
+  AdminPrivilegedActionsFilter:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+      FilterPattern: "Admin making privileged request at"
+      LogGroupName: !Ref LogGroupName
+      MetricTransformations:
+        -
+          MetricValue: "1"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricName:  "Admin Privileged Action"
+          DefaultValue: 0
+  AnVILRefererCount:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      FilterPattern: "[http_forwarded_for, dash, remote_user, timestamp, request=\"GET /api/api/ga4gh/v1/tools/*/versions/*/*/descriptor*\", status_code, bytes_sent, http_referer=\"https://anvil.terra.bio/*\", ...]"
+      MetricTransformations:
+        - MetricName: "AnVIL Referer Count"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0
+  logsMetricFilter:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+      FilterPattern:  "Terminating due to java.lang.OutOfMemoryError"
+      LogGroupName: !Ref LogGroupName
+      MetricTransformations:
+        - 
+          MetricValue:  "1"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricName:  "Out of Memory Count"
+          DefaultValue: 0
+  BioDataCatalystRefererCount:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      FilterPattern: "[http_forwarded_for, dash, remote_user, timestamp, request=\"GET /api/api/ga4gh/v1/tools/*/versions/*/*/descriptor*\", status_code, bytes_sent, http_referer=\"https://*terra.biodatacatalyst.nhlbi.nih.gov/*\", ...]"
+      MetricTransformations:
+        - MetricName: "BioData Catalyst Referer Count"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0
+  CloudTrailLoggingTurnedOff:
+      Type: AWS::Logs::MetricFilter
+      Properties:
+        LogGroupName: !Ref CloudTrailLogGroupName
+        FilterPattern: "{($.eventName = \"StopLogging\")}"
+        MetricTransformations:
+          - MetricName: "CloudTrail Logging Turned Off"
+            MetricNamespace: !Sub '${CloudTrailLogGroupName}-LogMetrics'
+            MetricValue: "1"
+            DefaultValue: 0
+  ConnectionAbandonedCount:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      FilterPattern: "CONNECTION ABANDONED"
+      MetricTransformations:
+        - MetricName: "CONNECTION ABANDONED Count"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0
+  DNAnexusRefererCount:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      FilterPattern: "[http_forwarded_for, dash, remote_user, timestamp, request=\"GET /api/api/ga4gh/v2/tools/*/versions/*/*/descriptor*\", status_code, bytes_sent, http_referer=\"https://platform.dnanexus.com/*\", ...]"
+      MetricTransformations:
+        - MetricName: "DNAnexus Referer Count"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0
+  DNAstackRefererCount:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      FilterPattern: "[http_forwarded_for, dash, remote_user, timestamp, request=\"GET /api/api/ga4gh/v1/tools/*/versions/*/*/descriptor*\", status_code, bytes_sent, http_referer=\"https://app.dnastack.com/*\", ...]"
+      MetricTransformations:
+        - MetricName: "DNAstack Referer Count"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0
+  DownloadZippedWorkflowCount:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      FilterPattern: "[http_forwarded_for, dash, remote_user, timestamp, request=\"GET /api/workflows/*/zip/*\", ...]"
+      MetricTransformations:
+        - MetricName: "Download Zipped Workflow Count"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0
+  EnvironmentTagAddedToUser:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !Ref CloudTrailLogGroupName
+      FilterPattern: "{($.eventName = \"TagUser\") && ($.requestParameters.tags[0].key = \"Environment\")}"
+      MetricTransformations:
+        - MetricName: "Environment Tag Added To User"
+          MetricNamespace: !Sub '${CloudTrailLogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0
+  FailedLoginAttempt:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !Ref CloudTrailLogGroupName
+      FilterPattern: "{($.eventName = \"ConsoleLogin\") && ($.errorMessage = \"Failed authentication\")}"
+      MetricTransformations:
+        - MetricName: "Failed Login Attempt"
+          MetricNamespace: !Sub '${CloudTrailLogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0
+  GetWorkflowContentCount:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      FilterPattern: "[http_forwarded_for, dash, remote_user, timestamp, request=\"GET /api/workflows/*/zip/* *\" || request=\"GET /api/api/ga4gh/v1/tools/*workflow*/versions/*/*/descriptor*\" || request=\"GET /api/api/ga4gh/v2/tools/*workflow*/versions/*/*/descriptor*\", ...]"
+      MetricTransformations:
+        - MetricName: "Get Workflow Content Count"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0
+  HTTP5XXErrors:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      FilterPattern: "[http_forwarded_for, dash, remote_user, timestamp, request, status_code=5*, ...]"
+      MetricTransformations:
+        - MetricName: "HTTP 5XX Errors"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0
+  IllegalStateExceptionMetric:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      FilterPattern: "\"java.lang.IllegalStateException: Received resultset tuples, but no field structure for them\""
+      MetricTransformations:
+        - MetricName: "IllegalStateException"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0
+  JDBCStatementCount10k:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      FilterPattern: "[logLevel, time, logger=org.hibernate*, SM, t_acquireConnections, nanosec1, numConnections1, JDBC_connections1, t_releaseConnections, nanosec2, numConnections2, JDBC_connections2, t_prep_statements, nanosec3, numStatements>10000, ...]"
+      MetricTransformations:
+        - MetricName: "JDBCStatementCount1k"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0
+  LargeResponse10MB:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      FilterPattern: "[ip, dash, remote_user, timestamp, request=GET* || request=POST*, status_code, bytes_sent > 1e7, http_referer, agent,...]"
+      MetricTransformations:
+        - MetricName: "LargeResponse10MB"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0
+  NonCLIUserAgentCount:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      FilterPattern: "[http_forwarded_for, dash, remote_user, timestamp, request = \"GET /api/users/user *\", status_code, bytes_sent, http_referer, user_agent!=\"Dockstore-CLI/*\", ...]" #CHECK THIS
+      MetricTransformations:
+        - MetricName: "Non-CLI User Agent Count"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0
+  OrganizationRequestCount:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      FilterPattern: "\"POST /api/organizations \""
+      MetricTransformations:
+        - MetricName: "Organization Request Count"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0
+  PoolExhaustedExceptionCount:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      FilterPattern: "PoolExhaustedException"
+      MetricTransformations:
+        - MetricName: "PoolExhaustedException Count"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0
+  PublishCount:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      FilterPattern: "[http_forwarded_for, dash, remote_user, timestamp, request=\"POST /api/*/*/publish *\", ...]"
+      MetricTransformations:
+        - MetricName: "Publish Count"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0
+  RefreshCount:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+     LogGroupName: !Ref LogGroupName
+     FilterPattern: "GET refresh"
+     MetricTransformations:
+       - MetricName: "Refresh Count"
+         MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+         MetricValue: "1"
+         DefaultValue: 0
+  RefreshCWLCount:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      FilterPattern: "\"dashboard.dockstore.org: Refreshing CWL\""
+      MetricTransformations:
+        - MetricName: "Refresh CWL Count"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0
+  Refreshgxformat2Count:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      FilterPattern: "\"dashboard.dockstore.org: Refreshing gxformat2\""
+      MetricTransformations:
+        - MetricName: "Refresh gxformat2 Count"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0
+  RefreshNFLCount:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      FilterPattern: "\"dashboard.dockstore.org: Refreshing NFL\""
+      MetricTransformations:
+        - MetricName: "Refresh NFL Count"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0
+  RefreshWDLCount:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      FilterPattern: "\"dashboard.dockstore.org: Refreshing WDL\""
+      MetricTransformations:
+        - MetricName: "Refresh WDL Count"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0
+  RefreshCWLToolCount:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      FilterPattern: "\"dashboard.dockstore.org: Refreshing CWL tool\""
+      MetricTransformations:
+        - MetricName: "Refresh CWL Tool Count"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0
+  RefreshCWLWorkflowCount:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      FilterPattern: "\"dashboard.dockstore.org: Refreshing CWL workflow\""
+      MetricTransformations:
+        - MetricName: "Refresh CWL Workflow Count"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0
+  Refreshgxformat2WorkflowCount:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      FilterPattern: "\"dashboard.dockstore.org: Refreshing gxformat2 workflow\""
+      MetricTransformations:
+        - MetricName: "Refresh gxformat2 Workflow Count"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0
+  RefreshNFLWorkflowCount:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      FilterPattern: "\"dashboard.dockstore.org: Refreshing NFL workflow\""
+      MetricTransformations:
+        - MetricName: "Refresh NFL Workflow Count"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0
+  RefreshWDLToolCount:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      FilterPattern: "\"dashboard.dockstore.org: Refreshing WDL tool\""
+      MetricTransformations:
+        - MetricName: "Refresh WDL Tool Count"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0
+  RefreshWDLWorkflowCount:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      FilterPattern: "\"dashboard.dockstore.org: Refreshing WDL workflow\""
+      MetricTransformations:
+        - MetricName: "Refresh WDL Workflow Count"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0
+  RefreshIndividualToolCount:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      FilterPattern: "[http_forwarded_for, dash, remote_user, timestamp, request=\"GET /api/containers/*/refresh *\", ...]"
+      MetricTransformations:
+        - MetricName: "Refresh Individual Tool Count"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0
+  RefreshIndividualWorkflowCount:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      FilterPattern: "[http_forwarded_for, dash, remote_user, timestamp, request=\"GET /api/workflows/*/refresh *\", ...]"
+      MetricTransformations:
+        - MetricName: "Refresh Individual Workflow Count"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0
+  RefreshIndividualToolAndWorkflowCount:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      FilterPattern: "[http_forwarded_for, dash, remote_user, timestamp, request=\"GET /api/containers/*/refresh *\" || request=\"GET /api/workflows/*/refresh *\", ...]"
+      MetricTransformations:
+        - MetricName: "Refresh Individual Tool and Workflow Count"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0
+  RefreshOrganizationToolsCount:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      FilterPattern: "[http_forwarded_for, dash, remote_user, timestamp, request=\"GET /api/users/*/containers/*/refresh *\", ...]"
+      MetricTransformations:
+        - MetricName: "Refresh Organization Tools Count"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0
+  RefreshOrganizationWorkflowsCount:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      FilterPattern: "[http_forwarded_for, dash, remote_user, timestamp, request=\"GET /api/users/*/workflows/*/refresh *\", ...]"
+      MetricTransformations:
+        - MetricName: "Refresh Organization Workflows Count"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0
+  RefreshOrganizationToolsAndWorkflowsCount:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      FilterPattern: "[http_forwarded_for, dash, remote_user, timestamp, request=\"GET /api/users/*/containers/*/refresh *\" || request=\"GET /api/users/*/workflows/*/refresh *\", ...]"
+      MetricTransformations:
+        - MetricName: "Refresh Organization Tools and Workflows Count"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0
+  RefreshWorkflowVersionCount:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      FilterPattern: "[http_forwarded_for, dash, remote_user, timestamp, request=\"GET /api/workflows/*/refresh/* *\", ...]"
+      MetricTransformations:
+        - MetricName: "Refresh Workflow Version Count"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0
+  RequestCountWithoutELBHealthCheckerandUptimeRobot:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      FilterPattern: "[http_forwarded_for, dash, remote_user, timestamp, request, status_code, bytes_sent, http_referer, user_agent!=\"ELB-HealthChecker/2.0\" && user_agent!=\"*UptimeRobot*\", ...]"
+      MetricTransformations:
+        - MetricName: "Request Count Without ELB Health Checker and Uptime Robot"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0
+  ResponseTime:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      FilterPattern: "[http_forwarded_for, dash, remote_user, timestamp, request, status_code, bytes_sent, http_referer, user_agent, remote_addr, response_time]"
+      MetricTransformations:
+        - MetricName: "Response Time"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricValue: "$response_time"
+          DefaultValue: 0
+  ResponseTimeWithoutELBHealthCheckandUptimeRobot:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      FilterPattern: "[http_forwarded_for, dash, remote_user, timestamp, request, status_code, bytes_sent, http_referer, user_agent!=\"ELB-HealthChecker/2.0\" && user_agent!=\"*UptimeRobot*\", remote_addr, response_time]" # requires $response_time FILTER WAS MODIFIED
+      MetricTransformations:
+        - MetricName: "Response Time Without ELB Health Check and Uptime Robot"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricValue: "$response_time"
+          DefaultValue: 0
+  StaleStateException:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      FilterPattern: "org.hibernate.StaleStateException"
+      MetricTransformations:
+        - MetricName: "StaleStateException"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0
+  TerraRefererCount:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      FilterPattern: "[http_forwarded_for, dash, remote_user, timestamp, request=\"GET /api/api/ga4gh/v1/tools/*/versions/*/*/descriptor*\", status_code, bytes_sent, http_referer=\"https://bvdp-saturn-dev.appspot.com/*\", ...]"
+      MetricTransformations:
+        - MetricName: "Terra Referer Count"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0
+  ToolDOICount:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      FilterPattern: "[http_forwarded_for, dash, remote_user, timestamp, request=\"POST /api/containers/*/requestDOI/* *\", ...]"
+      MetricTransformations:
+        - MetricName: "Tool DOI Count"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0
+  TooManyConcurrentElasticSearchRequests:
+      Type: AWS::Logs::MetricFilter
+      DependsOn: LogGroup
+      Properties:
+        LogGroupName: !Ref LogGroupName
+        FilterPattern: "too many concurrent Elasticsearch requests."
+        MetricTransformations:
+          - MetricName: "Too Many Concurrent Elasticsearch Requests"
+            MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+            MetricValue: "1"
+            DefaultValue: 0
+  UserPermissionsUpgraded:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !Ref CloudTrailLogGroupName
+      FilterPattern: "{($.eventName = \"AddUserToGroup\") || ($.eventName = \"AttachUserPolicy\")}"
+      MetricTransformations:
+        - MetricName: "User Permissions Upgraded"
+          MetricNamespace: !Sub '${CloudTrailLogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0
+  UserAddedToTagBasedSecurityGroup:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName: !Ref CloudTrailLogGroupName
+      FilterPattern: "{(($.eventName = \"AddUserToGroup\") && ($.requestParameters.groupName = \"EnvironmentTagBasedSsmAccess\"))}"
+      MetricTransformations:
+        - MetricName: "User Added to Tagged Based Security Group"
+          MetricNamespace: !Sub '${CloudTrailLogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0
+  UserCreated:
+      Type: AWS::Logs::MetricFilter
+      Properties:
+        LogGroupName: !Ref CloudTrailLogGroupName
+        FilterPattern: "{($.eventName = \"CreateUser\")}"
+        MetricTransformations:
+          - MetricName: "User Created"
+            MetricNamespace: !Sub '${CloudTrailLogGroupName}-LogMetrics'
+            MetricValue: "1"
+            DefaultValue: 0
+  WorkflowDOICount:
+    Type: AWS::Logs::MetricFilter
+    DependsOn: LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+      FilterPattern: "[http_forwarded_for, dash, remote_user, timestamp, request=\"PUT /api/workflows/*/requestDOI/* *\", ...]"
+      MetricTransformations:
+        - MetricName: "Workflow DOI Count"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0

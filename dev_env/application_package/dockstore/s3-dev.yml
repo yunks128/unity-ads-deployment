@@ -1,0 +1,149 @@
+# Commit: db4678a https://github.com/dockstore/dockstore-deploy/commits/db4678a
+# A template for creating the S3 bucket and IAM policy used to create Dockstore and Grafana
+# Also creates a bucket for ELB logs
+#
+# POST-INSTALL
+# ------------
+# You must manually create two folders in the S3 bucket created:
+#   1. bootstrap
+#   2. grafana
+#
+# The 'bootstrap' folder contains two items, which you must manually place into the folder:
+#   1. database.tar.gz, that has one file in it, database.sql. This file is used to populate the database.
+#   2. dockstore-github-private-key.tar.gz, with one file in it, dockstore-github-private-key.pem. This is the PEM file for GitHub apps.
+#
+# The 'grafana' folder can contains one item
+#   1. grafana_database_backup.db -> This is a Grafana database that is restored to the Grafana instance so previously created users still exist.
+#      ** This file is OPTIONAL if you choose NOT to restore Grafana users with a Grafana database. If you don't want to restore users, make sure
+#         that the RestoreGrafanaUsers parameter is set to 'false' when you are deploying dockstore.yml.
+
+Description: >
+  Creates an s3 startup bucket.
+
+Parameters:
+  BucketName:
+    Description: The bucket name specific to the deploy environment. Must be unique across all of AWS. Suggest dev-dockstore-startup, qa-staging-dockstore-startup, and prod-dockstore-startup.
+    Type: String
+    MinLength: 1
+    Default: uads-test-dockstore-startup
+  ELBLogsBucketName:
+    Description: The bucket name for ELB Logs
+    Type: String
+    MinLength: 1
+    Default: uads-test-dockstore-elb-logs
+
+# Account ids from https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/enable-access-logs.html
+Mappings:
+  Regions:
+    #us-east-1:
+    #  ELBAccountId: 'arn:aws:iam::127311923021:root'
+    us-west-2:
+      ELBAccountId: 'arn:aws:iam::797873946194:root'
+    #us-east-2:
+    #  ELBAccountId: 'arn:aws:iam::033677994240:root'
+
+Resources:
+  #StartupBucketManagedPolicy:
+  #  Type: AWS::IAM::ManagedPolicy
+  #  Properties:
+  #    PolicyDocument:
+  #      Version: '2012-10-17'
+  #      Id: DockstoreBucketPolicy
+  #      Statement:
+  #        Action:
+  #        - s3:GetObject
+  #        Effect: Allow
+  #        Resource: !Join ['', [!GetAtt S3Bucket.Arn, '/*']]
+
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      BucketName: !Ref BucketName
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-startup-bucket'
+        - Key: Environment
+          Value: 'test'
+
+  #ElbLogsBucketManagedPolicy:
+  #  Type: AWS::S3::BucketPolicy
+  #  Properties:
+  #    Bucket: !Ref ElbLogsBucket
+  #    PolicyDocument:
+  #      Statement:
+  #        - Effect: Allow
+  #          Action:
+  #            - s3:PutObject
+  #          Resource: !Join ['', [!GetAtt ElbLogsBucket.Arn, !Sub '/AWSLogs/${AWS::AccountId}/*']]
+  #          Principal:
+  #            AWS: !FindInMap
+  #              - Regions
+  #              - !Ref 'AWS::Region'
+  #              - ELBAccountId
+  #        - Effect: Allow
+  #          Action:
+  #            - s3:PutObject
+  #          Principal:
+  #            Service:
+  #              - "delivery.logs.amazonaws.com"
+  #          Resource: !Join ['', [!GetAtt ElbLogsBucket.Arn, !Sub '/AWSLogs/${AWS::AccountId}/*']]
+  #          Condition:
+  #            StringEquals:
+  #              "s3:x-amz-acl": "bucket-owner-full-control"
+  #        - Effect: Allow
+  #          Action:
+  #            - s3:GetBucketAcl
+  #          Resource: !GetAtt ElbLogsBucket.Arn
+  #          Principal:
+  #            Service:
+  #              - "delivery.logs.amazonaws.com"
+
+  ElbLogsBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      BucketName: !Ref ELBLogsBucketName
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-elb-logs-bucket'
+        - Key: Environment
+          Value: 'test'
+
+Outputs:
+  S3BucketName:
+    Description: The name of the S3 bucket that was created
+    Value: !Ref 'S3Bucket'
+    Export:
+      Name: !Sub '${AWS::StackName}-S3BucketName'
+  #StartupBucketManagedPolicy:
+  #  Description: Role to get get S3 items
+  #  Value: !Ref StartupBucketManagedPolicy
+  #  Export:
+  #    Name: !Sub '${AWS::StackName}-StartupBucketManagedPolicy'
+  ElbLogsBucket:
+    Description: The name of the S3 bucket that was created
+    Value: !Ref 'ElbLogsBucket'
+    Export:
+      Name: !Sub '${AWS::StackName}-ElbLogsBucket'
+

@@ -1,0 +1,99 @@
+# Commit: db4678a https://github.com/dockstore/dockstore-deploy/commits/db4678a
+Description: >
+  Creates an Elastic Search Service
+
+Parameters:
+  #CoreStack:
+  #  Description: The name of the core stack.
+  #  Type: String
+  #  MinLength: 1
+  EsLogGroupStack:
+    Description: The name of the log group stack
+    Type: String
+    Default: uads-test-dockstore-es-log-groups
+  ElasticsearchVersion:
+    Description: The Elastic Search version
+    Type: String
+    Default: '7.10'
+  DomainName:
+    Description: The Elastic Search domain name
+    Type: String
+    Default: test-dockstore-elasticsearch
+
+
+Resources:
+
+  ElasticsearchSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security Group for ElasticSearch
+      VpcId: 'vpc-0333cdc921d05f54f'
+      Tags:
+        - Key: Environment
+          Value: 'test'
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-sg-elasticsearch'
+
+  ElasticsearchService:
+    Type: AWS::Elasticsearch::Domain
+    Properties:
+      AccessPolicies:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: '*'
+              Service:
+               - 'es.amazonaws.com'
+            Action:
+              - 'es:ESHttp*'
+              - 'logs:PutLogEvents'
+              - 'logs:CreateLogStream'
+            Resource: '*'
+      DomainName: !Ref "DomainName"
+      EBSOptions:
+        EBSEnabled: true
+        VolumeSize: 20
+        VolumeType: gp2
+      ElasticsearchVersion: !Ref ElasticsearchVersion
+      ElasticsearchClusterConfig:
+        InstanceType: t3.small.elasticsearch
+        InstanceCount: 2
+      VPCOptions:
+        SecurityGroupIds:
+          - !Ref ElasticsearchSecurityGroup
+        SubnetIds:
+          - 'subnet-04af313ddac6a1b3b'
+      DomainEndpointOptions:
+        EnforceHTTPS: false
+      NodeToNodeEncryptionOptions:
+        Enabled: true
+      EncryptionAtRestOptions:
+        Enabled: false
+      LogPublishingOptions:
+        ES_APPLICATION_LOGS:
+          CloudWatchLogsLogGroupArn:
+            Fn::ImportValue: !Sub '${EsLogGroupStack}-EsApplicationLogGroup'
+          Enabled: true
+      Tags:
+        - Key: Environment
+          Value: test
+
+  OSLogGroupPolicy:
+    Type: AWS::Logs::ResourcePolicy
+    Properties:
+      PolicyName: AllowES
+      PolicyDocument: '{"Version": "2012-10-17","Statement":[{"Effect":"Allow","Principal": {"Service": ["es.amazonaws.com"]},"Action":["logs:PutLogEvents","logs:CreateLogStream"],"Resource":"*"}]}' 
+ 
+Outputs:
+  ESDomainEndpoint:
+    Description: The Elasticsearch domain
+    Value: !GetAtt 'ElasticsearchService.DomainEndpoint'
+    Export:
+      Name: !Sub '${AWS::StackName}-ESDomainEndpoint'
+  ESSecurityGroup:
+    Description: The SecurityGroup associated with ElasticSearch
+    Value: !Ref ElasticsearchSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-ESSecurityGroup'
+
