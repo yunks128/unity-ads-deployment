@@ -25,12 +25,12 @@ Parameters:
     Description: The bucket name specific to the deploy environment. Must be unique across all of AWS. Suggest dev-dockstore-startup, qa-staging-dockstore-startup, and prod-dockstore-startup.
     Type: String
     MinLength: 1
-    Default: uads-test-dockstore-startup
+    Default: uads-dev-dockstore-startup
   ELBLogsBucketName:
     Description: The bucket name for ELB Logs
     Type: String
     MinLength: 1
-    Default: uads-test-dockstore-elb-logs
+    Default: uads-dev-dockstore-elb-logs
 
 # Account ids from https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/enable-access-logs.html
 Mappings:
@@ -43,21 +43,21 @@ Mappings:
     #  ELBAccountId: 'arn:aws:iam::033677994240:root'
 
 Resources:
-  #StartupBucketManagedPolicy:
-  #  Type: AWS::IAM::ManagedPolicy
-  #  Properties:
-  #    PolicyDocument:
-  #      Version: '2012-10-17'
-  #      Id: DockstoreBucketPolicy
-  #      Statement:
-  #        Action:
-  #        - s3:GetObject
-  #        Effect: Allow
-  #        Resource: !Join ['', [!GetAtt S3Bucket.Arn, '/*']]
+  StartupBucketManagedPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: '2012-10-17'
+        Id: DockstoreBucketPolicy
+        Statement:
+          Action:
+          - s3:GetObject
+          Effect: Allow
+          Resource: !Join ['', [!GetAtt S3Bucket.Arn, '/*']]
 
   S3Bucket:
     Type: AWS::S3::Bucket
-    DeletionPolicy: Retain
+    DeletionPolicy: Delete
     Properties:
       BucketName: !Ref BucketName
       AccessControl: Private
@@ -74,10 +74,11 @@ Resources:
         - Key: Name
           Value: !Sub '${AWS::StackName}-startup-bucket'
         - Key: Environment
-          Value: 'test'
+          Value: 'dev'
 
   #ElbLogsBucketManagedPolicy:
   #  Type: AWS::S3::BucketPolicy
+  #  DependsOn: ElbLogsBucket
   #  Properties:
   #    Bucket: !Ref ElbLogsBucket
   #    PolicyDocument:
@@ -111,7 +112,7 @@ Resources:
 
   ElbLogsBucket:
     Type: AWS::S3::Bucket
-    DeletionPolicy: Retain
+    DeletionPolicy: Delete
     Properties:
       BucketName: !Ref ELBLogsBucketName
       AccessControl: Private
@@ -128,7 +129,7 @@ Resources:
         - Key: Name
           Value: !Sub '${AWS::StackName}-elb-logs-bucket'
         - Key: Environment
-          Value: 'test'
+          Value: 'dev'
 
 Outputs:
   S3BucketName:
@@ -136,11 +137,11 @@ Outputs:
     Value: !Ref 'S3Bucket'
     Export:
       Name: !Sub '${AWS::StackName}-S3BucketName'
-  #StartupBucketManagedPolicy:
-  #  Description: Role to get get S3 items
-  #  Value: !Ref StartupBucketManagedPolicy
-  #  Export:
-  #    Name: !Sub '${AWS::StackName}-StartupBucketManagedPolicy'
+  StartupBucketManagedPolicy:
+    Description: Role to get get S3 items
+    Value: !Ref StartupBucketManagedPolicy
+    Export:
+      Name: !Sub '${AWS::StackName}-StartupBucketManagedPolicy'
   ElbLogsBucket:
     Description: The name of the S3 bucket that was created
     Value: !Ref 'ElbLogsBucket'

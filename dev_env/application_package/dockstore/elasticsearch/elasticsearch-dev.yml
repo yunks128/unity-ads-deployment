@@ -10,7 +10,7 @@ Parameters:
   EsLogGroupStack:
     Description: The name of the log group stack
     Type: String
-    Default: uads-test-dockstore-es-log-groups
+    Default: awsEsLogGroupsDockstoreStack
   ElasticsearchVersion:
     Description: The Elastic Search version
     Type: String
@@ -18,7 +18,7 @@ Parameters:
   DomainName:
     Description: The Elastic Search domain name
     Type: String
-    Default: test-dockstore-elasticsearch
+    Default: dev-dockstore-elasticsearch
 
 
 Resources:
@@ -27,10 +27,10 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Security Group for ElasticSearch
-      VpcId: 'vpc-0333cdc921d05f54f'
+      VpcId: 'vpc-0106218dbddd3a753'
       Tags:
         - Key: Environment
-          Value: 'test'
+          Value: 'dev'
         - Key: Name
           Value: !Sub '${AWS::StackName}-sg-elasticsearch'
 
@@ -63,7 +63,7 @@ Resources:
         SecurityGroupIds:
           - !Ref ElasticsearchSecurityGroup
         SubnetIds:
-          - 'subnet-04af313ddac6a1b3b'
+          - 'subnet-00db2965967acb6b1'
       DomainEndpointOptions:
         EnforceHTTPS: false
       NodeToNodeEncryptionOptions:
@@ -77,7 +77,7 @@ Resources:
           Enabled: true
       Tags:
         - Key: Environment
-          Value: test
+          Value: dev
 
   OSLogGroupPolicy:
     Type: AWS::Logs::ResourcePolicy

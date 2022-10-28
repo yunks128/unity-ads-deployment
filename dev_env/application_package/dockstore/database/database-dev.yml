@@ -8,6 +8,7 @@ Parameters:
   CoreStack:
     Description: The name of the core stack
     Type: String
+    Default: "awsCoreDockstoreStack"
   AvailabilityZone:
     Description: The AWS availability zone, e.g, us-east-1a
     Type: String
@@ -33,7 +34,7 @@ Parameters:
   DBName:
     Description: 'Name of the database (ignored when DBSnapshotIdentifier is set, value used from snapshot).'
     Type: String
-    Default: test
+    Default: dev
   DBBackupRetentionPeriod:
     Description: 'The number of days to keep snapshots of the database.'
     Type: Number
@@ -43,7 +44,7 @@ Parameters:
   DBMasterUserPassword:
     Description: 'The master password for the DB instance (ignored when DBSnapshotIdentifier is set, value used from snapshot).'
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/test/DBPostgresPassword
+    Default: /DeploymentConfig/dev/DBPostgresPassword
     NoEcho: true
   DBMultiAZ:
     Description: 'Specifies if the database instance is deployed to multiple Availability Zones for HA.'
@@ -64,7 +65,7 @@ Parameters:
     Default: '13.3'
     #aws rds describe-db-engine-versions --engine postgres --query "DBEngineVersions[].EngineVersion"
   EnableIAMDatabaseAuthentication:
-    Description: 'Enable mapping of AWS Identity and Access Management (IAM) accounts to database accounts (https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/UsingWithRDS.IAMDBAuth.html).'
+    Description: 'Enable mapping of AWS Identity and Access Management (IAM) accounts to database accounts (https://docs.aws.amazon.com/AmazonRDS/ladev/AuroraUserGuide/UsingWithRDS.IAMDBAuth.html).'
     Type: String
     AllowedValues: ['true', 'false']
     Default: 'false'
@@ -100,15 +101,15 @@ Resources:
     Type: AWS::RDS::DBSubnetGroup
     Properties:
       DBSubnetGroupDescription: Subnet for database
-      DBSubnetGroupName: !Sub '$${AWS::StackName}-DbSubnetGroup'
+      DBSubnetGroupName: !Sub '${AWS::StackName}-DbSubnetGroup'
       SubnetIds:
-        - subnet-0b872f41e0cdc378d
-        - subnet-04af313ddac6a1b3b
+        - subnet-092597c48cfec3f04
+        - subnet-00db2965967acb6b1
       Tags:
         - Key: Name
-          Value: !Sub '$${AWS::StackName}-rds-subnet'
+          Value: !Sub '${AWS::StackName}-rds-subnet'
         - Key: Environment
-          Value: 'test'
+          Value: 'dev'
 
   DBInstance:
     DeletionPolicy: Snapshot # default
@@ -139,15 +140,15 @@ Resources:
       - !Ref DBSecurityGroup
       Tags:
         - Key: Name
-          Value: !Sub '$${AWS::StackName}-rds-db-instance'
+          Value: !Sub '${AWS::StackName}-rds-db-instance'
         - Key: Environment
-          Value: 'test'
+          Value: 'dev'
 
   DBSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Security group to control traffic to/from the RDS instance
-      VpcId: vpc-0333cdc921d05f54f
+      VpcId: vpc-0106218dbddd3a753
       SecurityGroupEgress:
         - Description: Allow outbound https traffic for AWS Service endpoints
           CidrIp: 0.0.0.0/0
@@ -161,25 +162,25 @@ Resources:
           IpProtocol: udp
       Tags:
         - Key: Name
-          Value: !Sub '$${AWS::StackName}-rds-db-sg'
+          Value: !Sub '${AWS::StackName}-rds-db-sg'
         - Key: Environment
-          Value: 'test'
+          Value: 'dev'
 
 Outputs:
   DBSecurityGroup:
     Description: The DB security group id
     Value: !GetAtt DBSecurityGroup.GroupId
     Export:
-      Name: !Sub '$${AWS::StackName}-DBSecurityGroup'
+      Name: !Sub '${AWS::StackName}-DBSecurityGroup'
   DBAddress:
     Description: Database address
     Value: !GetAtt DBInstance.Endpoint.Address
     Export:
-      Name: !Sub '$${AWS::StackName}-DBAddress'
+      Name: !Sub '${AWS::StackName}-DBAddress'
   DBPort:
     Description: Database port
     Value: !GetAtt DBInstance.Endpoint.Port
     Export:
-      Name: !Sub '$${AWS::StackName}-DBPort'
+      Name: !Sub '${AWS::StackName}-DBPort'
 
 

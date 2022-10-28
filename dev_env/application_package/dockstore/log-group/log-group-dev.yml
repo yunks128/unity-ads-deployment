@@ -8,12 +8,12 @@ Parameters:
   LogGroupName:
     Description: The name of the log group, which equals the domain
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/test/DomainName
+    Default: /DeploymentConfig/dev/DomainName
 
   CloudTrailLogGroupName:
     Description: The name of the CloudTrail log group
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/test/CloudTrailLogGroupName
+    Default: /DeploymentConfig/dev/CloudTrailLogGroupName
 
 Resources:
   LogGroup:
@@ -21,7 +21,11 @@ Resources:
       Type: AWS::Logs::LogGroup
       Properties:
         LogGroupName: !Ref LogGroupName
-
+  CloudTrailLogGroup:
+      DeletionPolicy: Retain
+      Type: AWS::Logs::LogGroup
+      Properties:
+        LogGroupName: !Ref CloudTrailLogGroupName
   # Metric filters for the log group created. These will be displayed as CloudWatch metrics.
   AdminPrivilegedActionsFilter:
     Type: AWS::Logs::MetricFilter
@@ -71,6 +75,7 @@ Resources:
           DefaultValue: 0
   CloudTrailLoggingTurnedOff:
       Type: AWS::Logs::MetricFilter
+      DependsOn: CloudTrailLogGroup
       Properties:
         LogGroupName: !Ref CloudTrailLogGroupName
         FilterPattern: "{($.eventName = \"StopLogging\")}"
@@ -125,6 +130,7 @@ Resources:
           DefaultValue: 0
   EnvironmentTagAddedToUser:
     Type: AWS::Logs::MetricFilter
+    DependsOn: CloudTrailLogGroup
     Properties:
       LogGroupName: !Ref CloudTrailLogGroupName
       FilterPattern: "{($.eventName = \"TagUser\") && ($.requestParameters.tags[0].key = \"Environment\")}"
@@ -135,6 +141,7 @@ Resources:
           DefaultValue: 0
   FailedLoginAttempt:
     Type: AWS::Logs::MetricFilter
+    DependsOn: CloudTrailLogGroup
     Properties:
       LogGroupName: !Ref CloudTrailLogGroupName
       FilterPattern: "{($.eventName = \"ConsoleLogin\") && ($.errorMessage = \"Failed authentication\")}"
@@ -519,6 +526,7 @@ Resources:
             DefaultValue: 0
   UserPermissionsUpgraded:
     Type: AWS::Logs::MetricFilter
+    DependsOn: CloudTrailLogGroup
     Properties:
       LogGroupName: !Ref CloudTrailLogGroupName
       FilterPattern: "{($.eventName = \"AddUserToGroup\") || ($.eventName = \"AttachUserPolicy\")}"
@@ -529,6 +537,7 @@ Resources:
           DefaultValue: 0
   UserAddedToTagBasedSecurityGroup:
     Type: AWS::Logs::MetricFilter
+    DependsOn: CloudTrailLogGroup
     Properties:
       LogGroupName: !Ref CloudTrailLogGroupName
       FilterPattern: "{(($.eventName = \"AddUserToGroup\") && ($.requestParameters.groupName = \"EnvironmentTagBasedSsmAccess\"))}"
@@ -539,6 +548,7 @@ Resources:
           DefaultValue: 0
   UserCreated:
       Type: AWS::Logs::MetricFilter
+      DependsOn: CloudTrailLogGroup
       Properties:
         LogGroupName: !Ref CloudTrailLogGroupName
         FilterPattern: "{($.eventName = \"CreateUser\")}"

@@ -19,7 +19,7 @@ Parameters:
   LogGroupName:
     Description: The name of the log group, which equals the domain
     Type: String
-    Default: /aws/aes/domains/test-dockstore-elasticsearch/application-logs
+    Default: /aws/aes/domains/dev-dockstore-elasticsearch/application-logs
 
 Resources:
   EsApplicationLogGroup:

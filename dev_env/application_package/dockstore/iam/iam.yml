@@ -46,6 +46,24 @@ Resources:
               StringLike:
                 "aws:PrincipalTag/Environment": "*${aws:ResourceTag/Environment}*"
 
+  DockstoreCloudFormationRole:
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow 
+           Action:
+             - "sts:AssumeRole"  
+           Principal:
+               Service:
+                -  cloudformation.amazonaws.com
+        Path: /
+        PermissionsBoundary: "arn:aws:iam::237868187491:policy/mcp-tenantOperator-AMI-APIG"      
+        ManagedPolicyArns:
+            - !Ref IAMFullAccess
+            - !Ref AmazonS3FullAccess
+            - !Ref AWSCloudFormationFullAccess
+ 
+
   ModifyInstanceMetaDataOptionsRole:
     Type: AWS::IAM::Role
     Properties:
@@ -60,7 +78,7 @@ Resources:
            Action:
               - 'sts:AssumeRole'
       Path: /
-      PermissionsBoundary: "arn:aws:iam::237868187491:policy/mcp-tenantOperator"
+      PermissionsBoundary: "arn:aws:iam::237868187491:policy/mcp-tenantOperator-AMI-APIG"
       Policies:
         - PolicyName: ModifyInstanceMetaDataOptions
           PolicyDocument:
