@@ -31,6 +31,11 @@ Parameters:
     Type: String
     MinLength: 1
     Default: uads-dev-dockstore-elb-logs
+  ResourcePrefix:
+    Description: The resource prefix (dev or test)
+    Type: String
+    MaxLength: 128
+    Default: dev
 
 # Account ids from https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/enable-access-logs.html
 Mappings:
@@ -74,7 +79,7 @@ Resources:
         - Key: Name
           Value: !Sub '${AWS::StackName}-startup-bucket'
         - Key: Environment
-          Value: 'dev'
+          Value: !Sub '${ResourcePrefix}'
 
   #ElbLogsBucketManagedPolicy:
   #  Type: AWS::S3::BucketPolicy
@@ -129,7 +134,7 @@ Resources:
         - Key: Name
           Value: !Sub '${AWS::StackName}-elb-logs-bucket'
         - Key: Environment
-          Value: 'dev'
+          Value: !Sub '${ResourcePrefix}'
 
 Outputs:
   S3BucketName:

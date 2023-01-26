@@ -19,7 +19,16 @@ Parameters:
     Description: The Elastic Search domain name
     Type: String
     Default: dev-dockstore-elasticsearch
-
+  ResourcePrefix:
+    Description: Env prefix (dev or test)
+    Type: String
+    Default: 'dev'
+  VpcId:
+    Description: VPC ID for desired VPC 
+    Type: String
+  SubnetId:
+    Description: Subnet ID for desired VPC
+    Type: String
 
 Resources:
 
@@ -27,10 +36,10 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Security Group for ElasticSearch
-      VpcId: 'vpc-0106218dbddd3a753'
+      VpcId: !Ref VpcId 
       Tags:
         - Key: Environment
-          Value: 'dev'
+          Value: !Ref ResourcePrefix 
         - Key: Name
           Value: !Sub '${AWS::StackName}-sg-elasticsearch'
 
@@ -63,7 +72,7 @@ Resources:
         SecurityGroupIds:
           - !Ref ElasticsearchSecurityGroup
         SubnetIds:
-          - 'subnet-00db2965967acb6b1'
+          - !Ref SubnetId 
       DomainEndpointOptions:
         EnforceHTTPS: false
       NodeToNodeEncryptionOptions:

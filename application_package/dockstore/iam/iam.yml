@@ -2,6 +2,13 @@
 Description: >
   IAM policies and groups
 
+Parameters:
+  ResourcePrefix:
+    Description: The resource prefix (dev or test)
+    Type: String
+    MaxLength: 128
+    Default: dev
+
 Resources:
   #Had to manually create Policies and Roles commented out due to requirement of security boundary - Dont really need Group
   #EnvironmentTagBasedSsmAccess:
@@ -57,7 +64,7 @@ Resources:
                Service:
                 -  cloudformation.amazonaws.com
         Path: /
-        PermissionsBoundary: "arn:aws:iam::237868187491:policy/mcp-tenantOperator-AMI-APIG"      
+        PermissionsBoundary: !Sub "arn:aws:iam::${AWS::AccountId}:policy/mcp-tenantOperator-AMI-APIG"      
         ManagedPolicyArns:
             - !Ref IAMFullAccess
             - !Ref AmazonS3FullAccess
@@ -67,7 +74,7 @@ Resources:
   ModifyInstanceMetaDataOptionsRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: uads-dev-meta-role
+      RoleName: !Sub 'uads-${ResourcePrefix}-meta-role'
       AssumeRolePolicyDocument:
        Version: "2012-10-17"
        Statement:
@@ -78,7 +85,7 @@ Resources:
            Action:
               - 'sts:AssumeRole'
       Path: /
-      PermissionsBoundary: "arn:aws:iam::237868187491:policy/mcp-tenantOperator-AMI-APIG"
+      PermissionsBoundary: !Sub "arn:aws:iam::${AWS::AccountId}:policy/mcp-tenantOperator-AMI-APIG"
       Policies:
         - PolicyName: ModifyInstanceMetaDataOptions
           PolicyDocument:
@@ -112,18 +119,14 @@ Resources:
             Resource:
               #- 'arn:aws:s3:::uads-dev-dockstore.lambda'
               #- 'arn:aws:s3:::dockstore.lambda/*'
-              - 'arn:aws:s3:::uads-dev-dockstore.lambda'
-              - 'arn:aws:s3:::uads-dev-dockstore.lambda/*'
-              - 'arn:aws:s3:::uads-test-dockstore.lambda'
-              - 'arn:aws:s3:::uads-test-dockstore.lambda/*'
+              - !Sub 'arn:aws:s3:::uads-${ResourcePrefix}-dockstore.lambda'
+              - !Sub 'arn:aws:s3:::uads-${ResourcePrefix}-dockstore.lambda/*'
               #- 'arn:aws:s3:::qa-dockstore.lambda'
               #- 'arn:aws:s3:::qa-dockstore.lambda/*'
               #- 'arn:aws:s3:::dockstore.lambda.us-west'
               #- 'arn:aws:s3:::dockstore.lambda.us-west/*'
-              - "arn:aws:s3:::uads-dev-dockstore-deploy/*"
-              - "arn:aws:s3:::uads-dev-dockstore-deploy"
-              - "arn:aws:s3:::uads-test-dockstore-deploy/*"
-              - "arn:aws:s3:::uads-test-dockstore-deploy"
+              - "arn:aws:s3:::uads-${ResourcePrefix}-dockstore-deploy/*"
+              - "arn:aws:s3:::uads-${ResourcePrefix}-dockstore-deploy"
               #- "arn:aws:s3:::prod-dockstore-deploy/*"
               #- "arn:aws:s3:::prod-dockstore-deploy"
           - Effect: Allow
