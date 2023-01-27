@@ -10,3 +10,15 @@ variable "resource_prefix" {
   default     = "dev"
 }
 
+variable "api_id" {
+  description = "The ID of the API from AWS"
+  type        = string
+}
+
+
+variable "api_parent_id" {
+  description = "The ID of the parent resource within the API to be updated"
+  type        = string
+}
+
+

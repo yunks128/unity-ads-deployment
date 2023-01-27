@@ -1,6 +1,6 @@
 # Commit: db4678a https://github.com/dockstore/dockstore-deploy/commits/db4678a
 Description: >
-  Manages WAF, API Gateway and its queues, and VPC.
+  Manages WAF, API Gateway and its queues.
 
 Mappings:
   Regions:
@@ -15,13 +15,18 @@ Mappings:
     #  az2: 'us-east-2b'
 
 Parameters:
-  # WAF Alarm parameters
-  #SlackSNSTopicName:
-  #  Description: Name of Amazon SNS Topic for sending alerts to a slack channel
-  #  Type: AWS::SSM::Parameter::Value<String>
-  #  Default: /DeploymentConfig/dev/SlackMediumPrioritySNSTopicName
 
   # API Gateway and Queue parameters
+  ResourcePrefix:
+    Description: The name of the env (dev or test)
+    Type: String
+    Default: 'dev'
+  RestApiId:
+    Description: The ID of the API from AWS
+    Type: String
+  TopParentId:
+    Description: The ID of the parent resource within the API to be updated
+    Type: String
   WebhookQueueName:
     Description: The name of the queue for the webhook
     Type: AWS::SSM::Parameter::Value<String>
@@ -30,30 +35,12 @@ Parameters:
     Description: The name of the dead queue
     Type: AWS::SSM::Parameter::Value<String>
     Default: /DeploymentConfig/dev/DeadQueueName
-  #CertificateArn:
-  #  Description: The AWS Certificate Manager ARN
-  #  Type: AWS::SSM::Parameter::Value<String>
-  #  Default: /DeploymentConfig/dev/GatewayCertificateArn
-  #ApiGatewayDomainName:
-  #  Description: Domain name for API Gateway
-  #  Type: AWS::SSM::Parameter::Value<String>
-  #  Default: /DeploymentConfig/dev/ApiGatewayDomainName
-
-  # Web ACL parameters
-  #BlockIPList:
-  #  Description: Comma-separated list of IP addresses blocked by the WAF.
-  #  Type: AWS::SSM::Parameter::Value<String>
-  #  Default: /DeploymentConfig/dev/BlockedIPs
   RateLimitPerIP:
     Description: Rate limit per IP address over a 5 minute period
     Type: Number
     Default: 2000
     MinValue: 100
     MaxValue: 100000
-  #RateLimitExemption:
-  #  Description: IP exempted from white limiting restrictions. Ideally it would be a list, but struggling with CF.
-  #  Type: AWS::SSM::Parameter::Value<String>
-  #  Default: /DeploymentConfig/RateLimitExemption
   WAFLogsBucketName:
     Description: The name of the S3 bucket for storing WAF logs (will be created/modified).
     Type: String
@@ -63,36 +50,15 @@ Parameters:
     Default: ''
     Type: String
 
-  # VPC parameters
-  #CidrPrefix:
-  #  Description: Recommended starting parts of CIDR blocks. See https://docs.aws.amazon.com/vpc/ladev/userguide/VPC_Subnets.html#vpc-subnet-basics
-  #  Type: String
-  #  Default: '10.0'
-  #  AllowedValues:
-  #    - '10.0'
-  #    - '172.16'
-  #    - '192.168'
-
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
-      #- Label:
-      #    default: 'VPC parameters'
-      #  Parameters:
-      #    - CidrPrefix
       - Label:
           default: 'API Gateway and Queue parameters'
         Parameters:
           - WebhookQueueName
           - DeadQueueName
-          #- CertificateArn
-          #- ApiGatewayDomainName
-      #- Label:
-      #    default: 'Web ACL parameters'
-        Parameters:
-          #- BlockIPList
           - RateLimitPerIP
-          #- RateLimitExemption
           - WAFLogsBucketName
           - WAFLogsPrefix
 
@@ -121,7 +87,7 @@ Resources:
         - Key: Name
           Value: !Sub '${AWS::StackName}-webhook-queue'
         - Key: Environment
-          Value: 'dev'
+          Value: !Ref ResourcePrefix
 
   DeadQueue:
     Type: AWS::SQS::Queue
@@ -135,133 +101,114 @@ Resources:
         - Key: Name
           Value: !Sub '${AWS::StackName}-dead-queue'
         - Key: Environment
-          Value: 'dev'
-
-  #ApiGateway:
-  #  Type: AWS::ApiGateway::RestApi
-  #  Properties:
-  #    Description: API Endpoint to receive JSON payloads and queue in SQS
-  #    Name: !Sub 'GitHubToSQS-${AWS::StackName}'
-  #    EndpointConfiguration:
-  #      Types:
-  #        - PRIVATE
-  #    Policy: '{
-  #  "Version": "2012-10-17",
-  #  "Statement": [
-  #      {
-  #          "Sid": "",
-  #          "Effect": "Allow",
-  #          "Principal": "*",
-  #          "Action": "*",
-  #          "Resource": "*",
-  #          "Condition": {
-  #              "StringEquals": {
-  #                  "aws:SourceVpc": "vpc-0333cdc921d05f54f"
-  #              }
-  #          }
-  #      }
-  #  ]
-#}'
-  #    Tags:
-  #      - Key: Name
-  #        Value: !Sub '${AWS::StackName}-api-gw'
-  #      - Key: Environment
-  #        Value: 'dev'
-
-  #ApiGatewayCloudWatchLogsRole:
-    #Properties:
-    #  AssumeRolePolicyDocument:
-    #    Statement:
-    #      - Action:
-    #          - sts:AssumeRole
-    #        Effect: Allow
-    #        Principal:
-    #          Service:
-    #            - apigateway.amazonaws.com
-    #    Version: '2012-10-17'
-    #  Policies:
-    #    - PolicyDocument:
-    #        Statement:
-    #          Effect: Allow
-    #          Action:
-    #            - logs:CreateLogGroup
-    #            - logs:CreateLogStream
-    #            - logs:DescribeLogGroups
-    #            - logs:PutLogEvents
-    #            - logs:GetLogEvents
-    #            - logs:FilterLogEvents
-    #          Resource: '*'
-    #      PolicyName: api-gw-logs-policy
-    #  RoleName: !Sub 'api-gw-logs-role-${AWS::StackName}'
-    #Type: AWS::IAM::Role
+          Value: !Ref ResourcePrefix
 
 
-  #APIGatewayRole:
-  #  Properties:
-  #    AssumeRolePolicyDocument:
-  #      Statement:
-  #        - Action:
-  #            - sts:AssumeRole
-  #          Effect: Allow
-  #          Principal:
-  #            Service:
-  #              - apigateway.amazonaws.com
-  #      Version: '2012-10-17'
-  #    Path: /
-  #    Policies:
-  #      - PolicyDocument:
-  #          Statement:
-  #            - Action: sqs:SendMessage
-  #              Effect: Allow
-  #              Resource: !GetAtt 'WebhookQueue.Arn'
-  #            - Action:
-  #                - logs:CreateLogGroup
-  #                - logs:CreateLogStream
-  #                - logs:PutLogEvents
-  #              Effect: Allow
-  #              Resource: '*'
-  #          Version: '2012-10-17'
-  #        PolicyName: apig-sqs-send-msg-policy
-  #    RoleName: !Sub 'apig-sqs-send-msg-role-${AWS::StackName}'
-  #  Type: AWS::IAM::Role
+  DockstoreInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      PermissionsBoundary: !Sub "arn:aws:iam::${AWS::AccountId}:policy/mcp-tenantOperator-AMI-APIG"
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: "ec2.amazonaws.com"
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns: 
+        - !Sub "arn:aws:iam::${AWS::AccountId}:policy/DatalakeKinesisPolicy"
+        - !Sub "arn:aws:iam::${AWS::AccountId}:policy/McpToolsAccessPolicy"
+        - "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+        - "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+        - "arn:aws:iam::aws:policy/CloudWatchFullAccess"
+        - "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+        - "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
+        - "arn:aws:iam::aws:policy/AmazonSSMFullAccess"
+  
+  DockstoreEc2Policy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: dockstore-ec2-connect
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Action:
+              - "ec2-instance-connect:SendSSHPublicKey"
+              - "ec2:DescribeInstances"
+            Resource: 
+              - "*"
+      Roles:
+        - !Ref DockstoreInstanceRole 
 
-  #ApiGatewayDomain:
-  #  Type: AWS::ApiGateway::DomainName
-  #  Properties:
-  #    #CertificateArn: !Ref CertificateArn
-  #    DomainName: !Ref ApiGatewayDomainName
-  #    EndpointConfiguration:
-  #      Types:
-  #        - PRIVATE
-  #    SecurityPolicy: TLS_1_2
-  #ApiGatewayMapping:
-  #  Type: AWS::ApiGateway::BasePathMapping
-  #  Properties:
-  #    DomainName: !Ref ApiGatewayDomain
-  #    RestApiId: !Ref ApiGateway
+
+  ApiGatewayLogsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      PermissionsBoundary: !Sub "arn:aws:iam::${AWS::AccountId}:policy/mcp-tenantOperator-AMI-APIG"
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: "apigateway.amazonaws.com"
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns: 
+        - "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs" 
+
+  ApiGatewaySqsSendMessageRole:
+    Type: AWS::IAM::Role
+    Properties:
+      PermissionsBoundary: !Sub "arn:aws:iam::${AWS::AccountId}:policy/mcp-tenantOperator-AMI-APIG"
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: "apigateway.amazonaws.com"
+            Action: 'sts:AssumeRole'
+        
+  ApiGatewaySqsSendMessagePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: apig-sqs-send-msg-policy
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Action:
+              - "logs:CreateLogStream"
+              - "logs:CreateLogGroup"
+              - "logs:PutLogEvents"
+              - "sqs:SendMessage"
+            Resource:
+              - "*"
+      Roles:  
+        - !Ref ApiGatewaySqsSendMessageRole
+              
 
   DockstoreResource:
     Type: AWS::ApiGateway::Resource
     Properties:
-      RestApiId: 1gp9st60gd
-      ParentId: 8bgevy
+      RestApiId: !Ref RestApiId
+      ParentId: !Ref TopParentId
       PathPart: dockstore
   WebhooksResource:
     Type: AWS::ApiGateway::Resource
     Properties:
-      RestApiId: 1gp9st60gd
+      RestApiId: !Ref RestApiId
       ParentId: !Ref DockstoreResource
       PathPart: webhooks
   GithubResource:
     Type: AWS::ApiGateway::Resource
     Properties:
-      RestApiId: 1gp9st60gd
+      RestApiId: !Ref RestApiId
       ParentId: !Ref WebhooksResource
       PathPart: github
   EnqueueResource:
     Type: AWS::ApiGateway::Resource
     Properties:
-      RestApiId: 1gp9st60gd
+      RestApiId: !Ref RestApiId
       ParentId: !Ref GithubResource
       PathPart: enqueue
   PostMethod:
@@ -270,7 +217,7 @@ Resources:
       AuthorizationType: NONE
       HttpMethod: POST
       Integration:
-        Credentials: arn:aws:iam::237868187491:role/uads-dockstore-dev-apigw
+        Credentials: !Sub "arn:aws:iam::237868187491:role/uads-dockstore-${ResourcePrefix}-apigw"
         IntegrationHttpMethod: POST
         IntegrationResponses:
           - StatusCode: '200'
@@ -302,43 +249,8 @@ Resources:
       RequestParameters:
         method.request.header.User-Agent: true
       ResourceId: !Ref EnqueueResource
-      RestApiId: 1gp9st60gd
+      RestApiId: !Ref RestApiId
 
-
-  #ApiGatewayAccount: 
-  #  Type: "AWS::ApiGateway::Account"
-  #  Properties: 
-  #    CloudWatchRoleArn: arn:aws:iam::428002334974:role/api-gw-logs-role-uads-dev-dockstore-core
-
-  #ApiGatewayDeployment:
-  #  DependsOn:
-  #    - PostMethod
-  #  Type: AWS::ApiGateway::Deployment
-  #  Properties:
-  #    RestApiId: !Ref ApiGateway
-  #    StageDescription:
-  #      LoggingLevel: INFO
-  #      MethodSettings:
-  #        - DataTraceEnabled: true
-  #          HttpMethod: "*"
-  #          LoggingLevel: "INFO"
-  #          ResourcePath: "/*"
-  #          MetricsEnabled: true
-  #    StageName: prod
-
-  #WebACLAssociation:
-  #  Type: AWS::WAFv2::WebACLAssociation
-  #  DependsOn:
-  #    - ApiGatewayDeployment
-  #  Properties:
-  #    ResourceArn: !Join
-  #        - ''
-  #        - - 'arn:aws:apigateway:'
-  #          - !Ref 'AWS::Region'
-  #          - '::/restapis/'
-  #          - !Ref ApiGateway
-  #          - '/stages/prod'
-  #    WebACLArn: !GetAtt 'WebACL.Arn'
 
   # Web ACL resources
   WAFLogsS3Bucket:
@@ -360,12 +272,12 @@ Resources:
         - Key: Name
           Value: !Sub '${AWS::StackName}-waf-logs-bucket'
         - Key: Environment
-          Value: 'dev'
+          Value: !Ref ResourcePrefix
 
   WAFLogsDeliveryRole:
     Type: AWS::IAM::Role
     Properties:
-      PermissionsBoundary: "arn:aws:iam::237868187491:policy/mcp-tenantOperator-AMI-APIG"
+      PermissionsBoundary: !Sub "arn:aws:iam::${AWS::AccountId}:policy/mcp-tenantOperator-AMI-APIG"
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -404,7 +316,7 @@ Resources:
     Type: AWS::KinesisFirehose::DeliveryStream
     Properties:
       # Prepending 'aws-waf-logs-' makes it selectable from the WAF properties in the console
-      DeliveryStreamName: 'aws-waf-logs-dev'
+      DeliveryStreamName: !Sub 'aws-waf-logs-${ResourcePrefix}'
       ExtendedS3DestinationConfiguration:
         BucketARN: !Join
           - ''
@@ -422,26 +334,7 @@ Resources:
         - Key: Name
           Value: !Sub '${AWS::StackName}-waf-stream'
         - Key: Environment
-          Value: 'dev'
-
-  #ExemptedFromRateLimitIPSet:
-  #  Type: AWS::WAFv2::IPSet
-  #  Properties:
-  #    Description: "IP that should not be rate limited, e.g., when running performance devs"
-  #    IPAddressVersion: IPV4
-  #    Name: !Sub '${AWS::StackName}-ExemptedIPSet'
-  #    Scope: REGIONAL
-  #    Addresses:
-  #      - !Ref RateLimitExemption
-
-  #BlockedIPSet:
-  #  Type: AWS::WAFv2::IPSet
-  #  Properties:
-  #    Addresses: !Split [",", !Ref BlockIPList]
-  #    Description: "IPs that should be blocked."
-  #    IPAddressVersion: IPV4
-  #    Name: BlockedIPSet
-  #    Scope: REGIONAL
+          Value: !Ref ResourcePrefix
 
   WebACL:
     Type: AWS::WAFv2::WebACL
@@ -579,139 +472,12 @@ Resources:
             RateBasedStatement:
               AggregateKeyType: IP
               Limit: !Ref RateLimitPerIP
-  #            ScopeDownStatement:
-  #              NotStatement:
-  #                Statement:
-  #                  IPSetReferenceStatement:
-  #                    Arn: !GetAtt 'ExemptedFromRateLimitIPSet.Arn'
-        #- Name: BlockedIPsRule
-        #  Priority: 3
-        #  Action:
-        #    Block: {}
-        #  VisibilityConfig:
-        #    SampledRequestsEnabled: true
-        #    CloudWatchMetricsEnabled: true
-        #    MetricName: !Sub 'BlockedIPsRule-${AWS::StackName}'
-        #  Statement:
-        #    ManagedRuleGroupStatement:
-        #      VendorName: AWS
-        #      Name: AWSManagedRulesAmazonIpReputationList
- 
-  #          IPSetReferenceStatement:
-  #            Arn: !GetAtt 'BlockedIPSet.Arn'
-
-  # VPC Resources
-  #VPC:
-  #  Type: AWS::EC2::VPC
-  #  Properties:
-  #    CidrBlock: !Sub '${CidrPrefix}.0.0/16'
-  #    EnableDnsHostnames: true
-  #    Tags:
-  #      - Key: Name
-  #        Value: !Sub '${AWS::StackName}-vpc'
-  #      - Key: Environment
-  #        Value: 'dev'
-
-  # for https://ucsc-cgl.atlassian.net/browse/SEAB-1189 wipe out permissions on the default security group, trying solution from https://serverfault.com/questions/544439/aws-cloudformation-vpc-default-security-group
-  #VPCDefaultSecurityGroupIngress:
-  #  Type: AWS::EC2::SecurityGroupIngress
-  #  Properties:
-  #    GroupId: !GetAtt VPC.DefaultSecurityGroup
-  #    CidrIp: 127.0.0.1/32
-  #    IpProtocol: "-1"
-  #VPCDefaultSecurityGroupEgress:
-  #  Type: AWS::EC2::SecurityGroupEgress
-  #  Properties:
-  #    GroupId: !GetAtt VPC.DefaultSecurityGroup
-  #    CidrIp: 127.0.0.1/32
-  #    IpProtocol: "-1"
-
-
-  #PublicRouteTable:
-  #  Type: AWS::EC2::RouteTable
-  #  Properties:
-  #    VpcId: !Ref VPC
-  #    Tags:
-  #      - Key: Name
-  #        Value: !Sub '${AWS::StackName}-rt'
-  #      - Key: Environment
-  #        Value: 'dev'
-
-  #InternetGateway:
-  #  Type: AWS::EC2::InternetGateway
-  #VPCGatewayAttachment:
-  #  DependsOn:
-  #    - VPC
-  #    - InternetGateway
-  #  Type: AWS::EC2::VPCGatewayAttachment
-  #  Properties:
-  #    InternetGatewayId: !Ref InternetGateway
-  #    VpcId: !Ref VPC
-
-  #PublicRoute:
-  #  Type: AWS::EC2::Route
-  #  DependsOn:
-  #    - VPCGatewayAttachment
-  #    - PublicRouteTable
-  #  Properties:
-  #    RouteTableId: !Ref PublicRouteTable
-  #    DestinationCidrBlock: 0.0.0.0/0
-  #    GatewayId: !Ref InternetGateway
-
-  #Subnet1:
-  #  Type: AWS::EC2::Subnet
-  #  DependsOn: VPC
-  #  Properties:
-  #    CidrBlock: !Sub '${CidrPrefix}.0.0/24'
-  #    AvailabilityZone: !FindInMap
-  #      - Regions
-  #      - !Ref 'AWS::Region'
-  #      - 'az1'
-  #    MapPublicIpOnLaunch: true
-  #    VpcId: !Ref VPC
-  #    Tags:
-  #      - Key: Name
-  #        Value: !Sub '${AWS::StackName}-vpc-subnet1'
-  #      - Key: Environment
-  #        Value: 'dev'
-  #Subnet2:
-  #  Type: AWS::EC2::Subnet
-  #  DependsOn: VPC
-  #  Properties:
-  #    CidrBlock: !Sub '${CidrPrefix}.1.0/24'
-  #    AvailabilityZone: !FindInMap
-  #      - Regions
-  #      - !Ref 'AWS::Region'
-  #      - 'az2'
-  #    MapPublicIpOnLaunch: true
-  #    VpcId: !Ref VPC
-  #    Tags:
-  #      - Key: Name
-  #        Value: !Sub '${AWS::StackName}-vpc-subnet2'
-  #      - Key: Environment
-  #        Value: 'dev'
-
-  #Subnet1RouteTableAssociation:
-  #  Type: AWS::EC2::SubnetRouteTableAssociation
-  #  DependsOn: PublicRouteTable
-  #  Properties:
-  #    SubnetId: !Ref Subnet1
-  #    RouteTableId: !Ref PublicRouteTable
-
-  #Subnet2RouteTableAssociation:
-  #  Type: AWS::EC2::SubnetRouteTableAssociation
-  #  DependsOn: PublicRouteTable
-  #  Properties:
-  #    SubnetId: !Ref Subnet2
-  #    RouteTableId: !Ref PublicRouteTable
 
   RateBasedWAFAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmName: Rate-based WAF Alarm
       AlarmDescription: Send an alert when a request is blocked due to the WAF rate-based rule being triggered
-      #AlarmActions:
-      #  - !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:${SlackSNSTopicName}'
       MetricName: BlockedRequests
       Dimensions:
        - Name: WebACL
@@ -730,16 +496,6 @@ Resources:
       TreatMissingData: notBreaching
 
 Outputs:
-  # Api Gateway and Queue
-  #ApiEndpoint:
-  #  Value: !Join
-  #    - ''
-  #    - - https://
-  #      - !Ref 'ApiGateway'
-  #      - .execute-api.
-  #      - !Ref 'AWS::Region'
-  #      - .amazonaws.com/
-  #      - prod
   WebhookQueueName:
     Description: The name of the webhook queue
     Value: !GetAtt 'WebhookQueue.QueueName'
@@ -758,19 +514,5 @@ Outputs:
     Export:
       Name: !Sub '${AWS::StackName}-DeliveryStreamArn'
 
-  #VPC outputs
-  #VpcId:
-  #  Description: The VPC id
-  #  Value: !Ref VPC
-  #  Export:
-  #    Name: !Sub '${AWS::StackName}-VpcId'
-  #Subnet1:
-  #  Value: !Ref Subnet1
-  #  Export:
-  #    Name: !Sub '${AWS::StackName}-Subnet1'
-  #Subnet2:
-  #  Value: !Ref Subnet2
-  #  Export:
-  #    Name: !Sub '${AWS::StackName}-Subnet2'
 
 
