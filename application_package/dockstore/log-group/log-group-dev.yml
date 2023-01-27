@@ -17,12 +17,12 @@ Parameters:
 
 Resources:
   LogGroup:
-      DeletionPolicy: Retain
+      DeletionPolicy: Delete
       Type: AWS::Logs::LogGroup
       Properties:
         LogGroupName: !Ref LogGroupName
   CloudTrailLogGroup:
-      DeletionPolicy: Retain
+      DeletionPolicy: Delete
       Type: AWS::Logs::LogGroup
       Properties:
         LogGroupName: !Ref CloudTrailLogGroupName

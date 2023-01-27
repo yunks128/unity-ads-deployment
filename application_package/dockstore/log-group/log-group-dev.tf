@@ -1,9 +1,4 @@
 
-resource "aws_cloudwatch_group" "cw_log_group" {
- name = "/aws/lambda/uads-${var.resource_prefix}-dockstore"
-
-}
-
 resource "aws_cloudformation_stack" "log_group" {
   name = "awsLogGroupDockstoreStack"
 
