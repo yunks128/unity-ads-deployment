@@ -81,40 +81,6 @@ Resources:
         - Key: Environment
           Value: !Sub '${ResourcePrefix}'
 
-  #ElbLogsBucketManagedPolicy:
-  #  Type: AWS::S3::BucketPolicy
-  #  DependsOn: ElbLogsBucket
-  #  Properties:
-  #    Bucket: !Ref ElbLogsBucket
-  #    PolicyDocument:
-  #      Statement:
-  #        - Effect: Allow
-  #          Action:
-  #            - s3:PutObject
-  #          Resource: !Join ['', [!GetAtt ElbLogsBucket.Arn, !Sub '/AWSLogs/${AWS::AccountId}/*']]
-  #          Principal:
-  #            AWS: !FindInMap
-  #              - Regions
-  #              - !Ref 'AWS::Region'
-  #              - ELBAccountId
-  #        - Effect: Allow
-  #          Action:
-  #            - s3:PutObject
-  #          Principal:
-  #            Service:
-  #              - "delivery.logs.amazonaws.com"
-  #          Resource: !Join ['', [!GetAtt ElbLogsBucket.Arn, !Sub '/AWSLogs/${AWS::AccountId}/*']]
-  #          Condition:
-  #            StringEquals:
-  #              "s3:x-amz-acl": "bucket-owner-full-control"
-  #        - Effect: Allow
-  #          Action:
-  #            - s3:GetBucketAcl
-  #          Resource: !GetAtt ElbLogsBucket.Arn
-  #          Principal:
-  #            Service:
-  #              - "delivery.logs.amazonaws.com"
-
   ElbLogsBucket:
     Type: AWS::S3::Bucket
     DeletionPolicy: Delete
