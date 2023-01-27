@@ -1,5 +1,5 @@
 resource "aws_cloudformation_stack" "iam" {
-  name = "awsIamDockstoreStack"
+  name = "awsIamDockstoreStack2"
 
   parameters = {
     ResourcePrefix = "${var.resource_prefix}"

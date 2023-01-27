@@ -9,18 +9,12 @@ Parameters:
     MaxLength: 128
     Default: dev
 
-Resources:
-  #Had to manually create Policies and Roles commented out due to requirement of security boundary - Dont really need Group
-  #EnvironmentTagBasedSsmAccess:
-  #  Type: AWS::IAM::Group
-  #  Properties:
-  #    GroupName: EnvironmentTagBasedSsmAccess
- 
+Resources: 
   EnvironmentTagSsmAccessPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
-      Description: Full SSM and EC2 access to users whose Environment tag contains EC2 Environment tag
-      ManagedPolicyName: TagBasedSsmAccess
+      Description: "Full SSM and EC2 access to users whose Environment tag contains EC2 Environment tag"
+      ManagedPolicyName: "TagBasedSsmAccess"
       PolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -33,10 +27,6 @@ Resources:
               - "ec2:StopInstances"
               - "ec2:Describe*"
             Resource: !Sub "arn:aws:ec2:*:${AWS::AccountId}:instance/*"
-            # Example
-            # User environment tag: "staging prod"
-            # EC2 Environment tag: "staging"
-            # Look for "staging" in "staging prod"
             Condition:
               StringLike:
                 "aws:PrincipalTag/Environment": "*${aws:ResourceTag/Environment}*"
@@ -54,21 +44,22 @@ Resources:
                 "aws:PrincipalTag/Environment": "*${aws:ResourceTag/Environment}*"
 
   DockstoreCloudFormationRole:
-      PolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow 
-           Action:
-             - "sts:AssumeRole"  
-           Principal:
-               Service:
-                -  cloudformation.amazonaws.com
-        Path: /
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+             Effect: Allow 
+             Action:
+               - "sts:AssumeRole"  
+             Principal:
+                 Service:
+                  -  cloudformation.amazonaws.com
         PermissionsBoundary: !Sub "arn:aws:iam::${AWS::AccountId}:policy/mcp-tenantOperator-AMI-APIG"      
         ManagedPolicyArns:
-            - !Ref IAMFullAccess
-            - !Ref AmazonS3FullAccess
-            - !Ref AWSCloudFormationFullAccess
+              - "arn:aws:iam::aws:policy/IAMFullAccess"
+              - "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+              - "arn:aws:iam::aws:policy/AWSCloudFormationFullAccess"
  
 
   ModifyInstanceMetaDataOptionsRole:
@@ -84,7 +75,6 @@ Resources:
                 - ssm.amazonaws.com
            Action:
               - 'sts:AssumeRole'
-      Path: /
       PermissionsBoundary: !Sub "arn:aws:iam::${AWS::AccountId}:policy/mcp-tenantOperator-AMI-APIG"
       Policies:
         - PolicyName: ModifyInstanceMetaDataOptions
@@ -117,18 +107,10 @@ Resources:
             # gave "s3:*" permissions. That's how the deployer was able to deploy lambdas before.
             # These buckets are in different accounts, but it's easier and still safe to just list all lambda buckets
             Resource:
-              #- 'arn:aws:s3:::uads-dev-dockstore.lambda'
-              #- 'arn:aws:s3:::dockstore.lambda/*'
               - !Sub 'arn:aws:s3:::uads-${ResourcePrefix}-dockstore.lambda'
               - !Sub 'arn:aws:s3:::uads-${ResourcePrefix}-dockstore.lambda/*'
-              #- 'arn:aws:s3:::qa-dockstore.lambda'
-              #- 'arn:aws:s3:::qa-dockstore.lambda/*'
-              #- 'arn:aws:s3:::dockstore.lambda.us-west'
-              #- 'arn:aws:s3:::dockstore.lambda.us-west/*'
-              - "arn:aws:s3:::uads-${ResourcePrefix}-dockstore-deploy/*"
-              - "arn:aws:s3:::uads-${ResourcePrefix}-dockstore-deploy"
-              #- "arn:aws:s3:::prod-dockstore-deploy/*"
-              #- "arn:aws:s3:::prod-dockstore-deploy"
+              - !Sub 'arn:aws:s3:::uads-${ResourcePrefix}-dockstore-deploy/*'
+              - !Sub 'arn:aws:s3:::uads-${ResourcePrefix}-dockstore-deploy'
           - Effect: Allow
             Action:
                 - 'sqs:CreateQueue'
