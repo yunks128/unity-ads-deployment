@@ -8,9 +8,11 @@ resource "aws_cloudformation_stack" "db" {
     VpcId = data.aws_vpc.unity_vpc.id
     SubnetId1 = tolist(data.aws_subnets.unity_public_subnets.ids)[0]
     SubnetId2 = tolist(data.aws_subnets.unity_public_subnets.ids)[1]
+    AvailabilityZone = "${var.db_availability_zone}"
   }
 
   template_body = file("${path.module}/database-dev.yml")
-
+  
+  timeout_in_minutes = 60
 
 }

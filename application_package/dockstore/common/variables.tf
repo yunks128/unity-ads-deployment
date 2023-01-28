@@ -21,3 +21,9 @@ variable "api_parent_id" {
   type        = string
 }
 
+
+variable "db_availability_zone" {
+  description = "The availability zone for the RDS DB"
+  type = string
+  default = "us-west-2a"
+}
