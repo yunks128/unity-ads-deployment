@@ -1,2 +1,0 @@
-../common/vpc.tf
-

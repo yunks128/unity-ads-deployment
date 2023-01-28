@@ -1,2 +1,0 @@
-../common/variables.tf
-
