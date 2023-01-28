@@ -3,14 +3,6 @@
 # After deploying this stack but before creating ES, you need to add a resource policy for the Elasticsearch service
 # to have access. Lame that it is not supported by CloudFormation!
 #
-# aws logs put-resource-policy --cli-input-json file://input.json
-#
-# where input.json is (you'll need to update "<env>", "<region>", "<accountId>"):
-
-#  {
-#    "policyName": "AES-<env>-dockstore-elasticsearch-Application-logs",
-#    "policyDocument": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"es.amazonaws.com\"},\"Action\":[\"logs:PutLogEvents\",\"logs:CreateLogStream\"],\"Resource\":\"arn:aws:logs:<region>:<accountId>:log-group:/aws/aes/domains/<env>-dockstore-elasticsearch/application-logs:*\"}]}"
-#  }
 
 Description: >
   Manages the Elasticsearch service log group(s)
