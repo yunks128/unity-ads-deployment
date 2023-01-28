@@ -3,10 +3,6 @@ Description: >
   Creates an Elastic Search Service
 
 Parameters:
-  #CoreStack:
-  #  Description: The name of the core stack.
-  #  Type: String
-  #  MinLength: 1
   EsLogGroupStack:
     Description: The name of the log group stack
     Type: String

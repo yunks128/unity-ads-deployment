@@ -4,372 +4,33 @@ Description: >
   Manages the Dockstore EC2 instances, as well as the lambda that fetches from SQS and invokes the web service.
 
 Parameters:
-  AutoUpdate:
-    Description: Whether the webservice and UI should update themselves nightly. Set to false for staging and prod!
+  ResourcePrefix:
+    Description: Env prefix (dev or test)
     Type: String
-    Default: false
-    AllowedValues:
-      - true
-      - false
-  #CheckUrlExistsStack:
-  #  Description: The name of the check url exists stack.
-  #  Type: String
-  #  MinLength: 1
-  #CheckUrlLambdaVersion:
-  #  Description: The check url lambda version.
-  #  Type: String
-  #  Default: ''
-  CWLParsingLambdaVersion:
-    Description: The CWL parsing lambda version.
+    Default: 'dev'
+  VpcId: 
+    Description: ID for the VPC the LB is to be within
     Type: String
-    Default: ''
-  CoreStack:
-    Description: The name of the core stack.
+  SubnetId1:
+    Description: ID for the first subnet the LB is to be accessible on
     Type: String
-    MinLength: 1
-    Default: 'uads-dev-dockstore-core'
-  S3Stack:
-    Description: The name of the S3 stack.
+  SubnetId2:
+    Description: ID for the second subnet the LB is to be accessible on
     Type: String
-    MinLength: 1
-    Default: 'uads-dev-dockstore-s3'
-  RdsStack:
-    Description: The name of the RDS stack
-    Type: String
-    MinLength: 1
-    Default: 'uads-dev-dockstore-database'
-  ElasticsearchStack:
-    Description: The name of the Elasticsearch stack
-    Type: String
-    MinLength: 1
-    Default: 'uads-dev-dockstore-es'
-  ElasticsearchMaxConcurrentSessions:
-    Description: The max number of concurrent calls allowed for the search endpoint
-    Type: Number
-    Default: 150
-    MinValue: 1
-  ComposeSetupVersion:
-    Description: Branch/tag of compose_setup to checkout
-    Type: String
-    Default: elop
-    MinLength: 1
-  DockstoreDeployVersion:
-    Description: The name of a dockstore deploy git reference, used to find a deploy build in the deploy bucket
-    Type: String
-    Default: 1.12.3
-  WebserviceTag:
-    Description: The webservice quay.io tag on https://quay.io/repository/dockstore/dockstore-webservice?tab=tags. Only specify the tag, e.g., elop
-    Type: String
-    Default: elop
-  UiVersion:
-    Description: The UI version; must be available via CloudFront
-    Type: String
-    MinLength: 1
-    Default: elop-a8b625d
-  #GalaxyPluginVersion:
-  #  Description: Which version of galaxy to download from artifactory (e.g. 0.0.3). Leave blank if no version desired.
-  #  Type: String
-  #  Default: 0.0.7
-  DockstoreLambdaBucket:
-    Description: The s3 bucket with zip files of Dockstore lambda. Must be in same region as the CF stack. For us-east-1, dockstore.lambda; for us-west-2, dockstore.lambda.us-west.
-    Type: String
-    Default: 'uads-dev-dockstore-lambda-bucket'
-  DockstoreLambdaKey:
-    Description: The s3 key of the Dockstore lambda zip file
-    Type: String
-    Default: 'upsertGitHubTag.zip'
-  DockstoreLambdaMaxConcurrency:
-    Description: ReservedConcurrentExecutions for the Dockstore lambda to throttle requests. 0 uses AWS account's remaining unreserved lambda concurrency.
-    Type: Number
-    Default: 12
-    MinValue: 0
-    MaxValue: 1000
-  AvailabilityZone:
-    Description: The AWS availability zone, e.g, us-east-1a
-    Type: String
-    AllowedValues:
-      # Just a starting point; we could support all zones. And there is a better way to do this, see FN:GetAZs
-      #- us-east-1a
-      #- us-east-1b
-      #- us-west-1a
-      #- us-west-1b
-      - us-west-2a
-      - us-west-2b
-      #- us-east-2a
-      #- us-east-2b
-    Default: us-west-2a
-  InstanceType:
-    Description: The EC2 instance type for Dockstore
-    Type: String
-    Default: t2.medium
   LoadBalancerIdleTimeout:
     Description: The idle timeout value, in seconds
     Type: Number
     Default: 600
     MinValue: 1
     MaxValue: 4000
-  #NextflowParsingLambdaVersion:
-  #  Description: The nextflow parsing lambda version.
-  #  Type: String
-  #  Default: ''
-  #WDLParsingLambdaVersion:
-  #  Description: The WDL parsing lambda version.
-  #  Type: String
-  #  Default: ''
-  
-
-  # Application level parameters with values in Parameter Store
-  AuthorizerType:
-    Description: The authorizer Dockstore should use -- inmemory, sam, or none
-    Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/AuthorizerType
-  #BdCatalystSevenBridgesImportUrl:
-  #  Description: The import url for the Seven Bridges instance of BD Catalyst
-  #  Type: AWS::SSM::Parameter::Value<String>
-  #  Default: /DeploymentConfig/dev/BdCatalystSevenBridgesImportUrl
-  #BdCatalystTerraImportUrl:
-  #  Description: The import url for the Terra instance of BD Catalyst
-  #  Type: AWS::SSM::Parameter::Value<String>
-  #  Default: /DeploymentConfig/dev/BdCatalystTerraImportUrl
-  #BitbucketClientId:
-  #  Description: The Bitbucket client id
-  #  Type: AWS::SSM::Parameter::Value<String>
-  #  Default: /DeploymentConfig/dev/BitbucketClientId
-  #BitbucketClientSecret:
-  #  Description: The Bitbucket client secret
-  #  Type: AWS::SSM::Parameter::Value<String>
-  #  Default: /DeploymentConfig/dev/BitbucketClientSecret
-  #  NoEcho: true
-  #DiscourseCategoryId:
-  #  Description: The Discourse category id
-  #  Type: AWS::SSM::Parameter::Value<String>
-  #  Default: /DeploymentConfig/dev/DiscourseCategoryId
-  #DiscourseKey:
-  #  Description: The Discourse key
-  #  Type: AWS::SSM::Parameter::Value<String>
-  #  Default: /DeploymentConfig/dev/DiscourseKey
-  #  NoEcho: true
-  #DiscourseUrl:
-  #  Description: The Discourse url
-  #  Type: AWS::SSM::Parameter::Value<String>
-  #  Default: /DeploymentConfig/dev/DiscourseUrl
-  #DockstoreApiUrl:
-  #  Description: The fully qualified base url for the Dockstore API trailing slash required, e.g., https://.dockstore.net/api/
-  #  Type: AWS::SSM::Parameter::Value<String>
-  #  Default: /DeploymentConfig/dev/DockstoreApiUrl
-  DockstoreToken:
-    Description: The Dockstore token used by the lambda to make API calls to Dockstore
-    Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/DockstoreToken
-    NoEcho: true
-  #DocumentationUrl:
-  #  Description: The documentation  url
-  #  Type: AWS::SSM::Parameter::Value<String>
-  #  Default: /DeploymentConfig/dev/DocumentationUrl
-  #DomainName:
-  #  Description: The domain of this Dockstore instance, e.g., dockstore.org, staging.dockstore.org, .dockstore.net
-  #  Type: AWS::SSM::Parameter::Value<String>
-  #  Default: /DeploymentConfig/dev/DomainName
-  #ExternalGoogleClientPrefix:
-  #  Description: The external Google audience that Dockstore will accept tokens from
-  #  Type: AWS::SSM::Parameter::Value<String>
-  #  Default: /DeploymentConfig/dev/ExternalGoogleClientPrefix
-  #FeaturedContentUrl:
-  #  Description: The CloudFront content to populate the featured collection and organization
-  #  Type: AWS::SSM::Parameter::Value<String>
-  #  Default: /DeploymentConfig/dev/FeaturedContentURL
-  #FeaturedNewsUrl:
-  #  Description: The CloudFront content to populate news and events
-  #  Type: AWS::SSM::Parameter::Value<String>
-  #  Default: /DeploymentConfig/dev/FeaturedNewsURL    
-  GitHubAppId:
-    Description: The GitHub App id
-    Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/GitHubAppId
-  GitHubAppName:
-    Description: The GitHub App name
-    Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/GitHubAppName
-  GitHubClientId:
-    Description: The GitHub Client id
-    Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/GitHubClientId
-  GitHubClientSecret:
-    Description: The GitHub Client secret
-    Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/GitHubClientSecret
-    NoEcho: true
-  #GitLabClientId:
-  #  Description: The GitLab Client id
-  #  Type: AWS::SSM::Parameter::Value<String>
-  #  Default: /DeploymentConfig/dev/GitLabClientId
-  #GitLabClientSecret:
-  #  Description: The GitLab Client secret
-  #  Type: AWS::SSM::Parameter::Value<String>
-  #  Default: /DeploymentConfig/dev/GitLabClientSecret
-  #  NoEcho: true
-  #GoogleClientId:
-  #  Description: The Google Client secret
-  #  Type: AWS::SSM::Parameter::Value<String>
-  #  Default: /DeploymentConfig/dev/GoogleClientId
-  #GoogleClientSecret:
-  #  Description: The Google Client secret
-  #  Type: AWS::SSM::Parameter::Value<String>
-  #  Default: /DeploymentConfig/dev/GoogleClientSecret
-  #  NoEcho: true
-  DBDockstoreUserPassword:
-    Description: The password for the Postgres dockstore user
-    Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/DBDockstorePassword
-    NoEcho: true
-  DBPostgresPassword:
-    Description: The Postgres user password
-    Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/DBPostgresPassword
-    NoEcho: true
-  #OrcidClientId:
-  #  Description: The ORCID client id
-  #  Type: AWS::SSM::Parameter::Value<String>
-  #  Default: /DeploymentConfig/dev/OrcidClientId
-  #OrcidClientSecret:
-  #  Description: The ORCID client secret
-  #  Type: AWS::SSM::Parameter::Value<String>
-  #  Default: /DeploymentConfig/dev/OrcidClientSecret
-  #  NoEcho: true
-  #OrcidUrl:
-  #  Description: The ORCID url
-  #  Type: AWS::SSM::Parameter::Value<String>
-  #  Default: /DeploymentConfig/dev/OrcidUrl
-  #OrcidScope:
-  #  Description: The ORCID scope
-  #  Type: AWS::SSM::Parameter::Value<String>
-  #  Default: /DeploymentConfig/dev/OrcidScope
-  #QuayClientId:
-  #  Description: The Quay Client id
-  #  Type: AWS::SSM::Parameter::Value<String>
-  #  Default: /DeploymentConfig/dev/QuayClientId
-  #QuayClientSecret:
-  #  Description: The Quay Client secret
-  #  Type: AWS::SSM::Parameter::Value<String>
-  #  Default: /DeploymentConfig/dev/QuayClientSecret
-  #  NoEcho: true
-  #SamPath:
-  #  Description: SAM base path
-  #  Type: AWS::SSM::Parameter::Value<String>
-  #  Default: /DeploymentConfig/dev/SamPath
-  SecretToken:
-    Description: The secret token used by GitHub lambda
-    Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/SecretToken
-    NoEcho: true
-  #SlackMediumPrioritySNSTopicName:
-  #  Description: Name of Amazon SNS Topic for sending medium priority alerts to a slack channel
-  #  Type: AWS::SSM::Parameter::Value<String>
-  #  Default: /DeploymentConfig/dev/SlackMediumPrioritySNSTopicName
-  TagManagerId:
-    Description: The Google Tag Manager id
-    Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/TagManagerId
-  #TerraImportUrl:
-  #  Description: The Terra Import Url
-  #  Type: AWS::SSM::Parameter::Value<String>
-  #  Default: /DeploymentConfig/dev/TerraImportUrl
-  ToolTesterBucketName:
-    Description: The Tool Tester bucket name
-    Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/ToolTesterBucketName
-  #ZenodoClientId:
-  #  Description: The Zenodo Client id
-  #  Type: AWS::SSM::Parameter::Value<String>
-  #  Default: /DeploymentConfig/dev/ZenodoClientId
-  #ZenodoClientSecret:
-  #  Description: The Zenodo Client secret
-  #  Type: AWS::SSM::Parameter::Value<String>
-  #  Default: /DeploymentConfig/dev/ZenodoClientSecret
-  #  NoEcho: true
-  #ZenodoUrl:
-  #  Description: The Zenodo url
-  #  Type: AWS::SSM::Parameter::Value<String>
-  #  Default: /DeploymentConfig/dev/ZenodoUrl
-
-#System Level Parameters from Parameter Store
-#  CertificateArn:
-#    Description: The AWS Certificate Manager ARN
-#    Type: AWS::SSM::Parameter::Value<String>
-#    Default: /DeploymentConfig/dev/LoadBalancerCertificateArn
-
-Mappings:
-  Regions:
-    #us-east-1:
-    #  ubuntu20ami: 'ami-0fa37863afb290840' # Ubuntu Focal 20.04-20210315
-    us-west-1:
-      ubuntu20ami: 'ami-043738bfa891187cc' # Ubuntu Focal 20.04-20210315
-    us-west-2:
-      ubuntu20ami: 'ami-043738bfa891187cc' # Ubuntu Focal 20.04-20210315
-    #us-east-2:
-    #  ubuntu20ami: 'ami-0fb653ca2d3203ac1' # Ubuntu Focal 20.04-20210315
-
-Conditions:
-  # We tear down LB nightly in , don't protect it.
-  EnableLbDeletionProtection: 
-    !Not [!Equals [ dev, dev]]
 
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
-          default: "Configure the Dockstore Software Versions"
-        Parameters:
-          - AutoUpdate
-          - ComposeSetupVersion
-          - WebserviceTag
-          - UiVersion
-          #- GalaxyPluginVersion
-          - DockstoreLambdaBucket
-          - DockstoreLambdaKey
-      - Label:
-          default: "Other stacks"
-        Parameters:
-          - CoreStack
-          - S3Stack
-          - RdsStack
-      - Label:
-          default: "Provide EC2 Instance Details"
-        Parameters:
-          - InstanceType
-          - AvailabilityZone
-      - Label:
           default: "Load Balancer Settings"
         Parameters:
           - LoadBalancerIdleTimeout
-      - Label:
-          default: "SSM Parameter Store Key Names that should typically not be changed"
-        Parameters:
-         # - BdCatalystSevenBridgesImportUrl
-         # - BdCatalystTerraImportUrl
-         # - BitbucketClientId
-         # - BitbucketClientSecret
-         # - CertificateArn
-         # - DiscourseCategoryId
-         # - DiscourseKey
-         # - DiscourseUrl
-         # - DocumentationUrl
-         # - DomainName
-          - GitHubAppId
-          - GitHubAppName
-          - GitHubClientId
-          - GitHubClientSecret
-         # - GitLabClientId
-         # - GitLabClientSecret
-         # - GoogleClientId
-         # - GoogleClientSecret
-         # - QuayClientId
-         # - QuayClientSecret
-          - TagManagerId
-         # - TerraImportUrl
-         # - ZenodoClientId
-         # - ZenodoClientSecret
-         # - ZenodoUrl
 
 Resources:
 
@@ -411,32 +72,12 @@ Resources:
           FromPort: 9999
           ToPort: 9999
           CidrIp: 0.0.0.0/0
-      VpcId: "vpc-0106218dbddd3a753"
+      VpcId: !Ref VpcId
       Tags:
         - Key: Name
           Value: !Sub '${AWS::StackName}-sg-lb-80-443'
         - Key: Environment
-          Value: 'dev'
-
-  # Security group to allow Grafana traffic to pass through the load balancer.
-  # Authorized access is IP-based, elopers must allow-list their specific IP addresses.
-  #LbGrafanaSecurityGroup:
-  #  Type: AWS::EC2::SecurityGroup
-  #  Properties:
-  #    GroupDescription: Security group on the load balancer that allows Grafana traffic to pass through the load balancer
-  #    GroupName: !Sub 'lb-security-group-grafana-${AWS::StackName}'
-  #    SecurityGroupIngress:
-  #      - IpProtocol: tcp
-  #        FromPort: 3000
-  #        ToPort: 3000
-  #        CidrIp: 10.11.12.13/32
-  #    VpcId:
-  #      Fn::ImportValue: !Sub '${CoreStack}-VpcId'
-  #    Tags:
-  #      - Key: Name
-  #        Value: !Sub '${AWS::StackName}-sg-lb-3000'
-  #      - Key: Environment
-  #        Value: ''
+          Value: !Ref ResourcePrefix
 
   # An application load balancer
   LoadBalancer:
@@ -448,36 +89,21 @@ Resources:
           Value: !Ref LoadBalancerIdleTimeout
         - Key: "access_logs.s3.enabled"
           Value: 'false'
-        #- Key: "access_logs.s3.bucket"
-        #  Value:
-        #    Fn::ImportValue: !Sub '${S3Stack}-ElbLogsBucket'
         - Key: "deletion_protection.enabled"
-          Value:
-            !If [EnableLbDeletionProtection, 'true', 'false']
+          Value: 'false'
       Name: !Sub '${AWS::StackName}-lb'
       Scheme: internet-facing
       SecurityGroups:
         - !Ref LbSecurityGroup
-      #  - !Ref LbGrafanaSecurityGroup
       Subnets:
-         - subnet-0ebdd997cc3ebe58d
-         - subnet-059bc4f467275b59d
+         - !Ref SubnetId1 
+         - !Ref SubnetId2 
       Type: application
       Tags:
         - Key: Name
           Value: !Sub '${AWS::StackName}-lb'
         - Key: Environment
-          Value: 'dev'
-
-  #WebACLAssociation:
-  #  Type: AWS::WAFv2::WebACLAssociation
-  #  DependsOn:
-  #    - LoadBalancer
-  #  Properties:
-  #    ResourceArn: !Ref LoadBalancer
-  #    WebACLArn:
-  #      Fn::ImportValue:
-  #        !Sub '${CoreStack}-WebACLArn'
+          Value: !Ref ResourcePrefix
 
 
 Outputs:
@@ -489,11 +115,6 @@ Outputs:
     Value: !Ref LbSecurityGroup
     Export:
       Name: !Sub '${AWS::StackName}-LBSecurityGroup'
-  #LBGrafanaSecurityGroup:
-  #  Description: The Load Balancer's Grafana security group
-  #  Value: !Ref LbGrafanaSecurityGroup
-  #  Export:
-  #    Name: !Sub '${AWS::StackName}-LBGrafanaSecurityGroup'
   LoadBalancer:
     Description: The load balancer
     Value: !Ref LoadBalancer

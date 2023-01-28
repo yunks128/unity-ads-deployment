@@ -21,4 +21,3 @@ variable "api_parent_id" {
   type        = string
 }
 
-
