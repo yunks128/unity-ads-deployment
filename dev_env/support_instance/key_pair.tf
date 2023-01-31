@@ -7,8 +7,3 @@ resource "aws_key_pair" "dev_support_key_pair" {
   key_name   = "${var.resource_prefix}-${var.tenant_identifier}-support-kp"
   public_key = tls_private_key.dev_support_priv_key.public_key_openssh
 }
-
-output "private_key" {
-  value     = tls_private_key.dev_support_priv_key.private_key_pem
-  sensitive = true
-}

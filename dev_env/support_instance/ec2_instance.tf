@@ -31,3 +31,7 @@ resource "aws_instance" "dev_support_ec2" {
   })
 
 }
+
+output "instance_id" {
+  value = aws_instance.dev_support_ec2.id
+}
