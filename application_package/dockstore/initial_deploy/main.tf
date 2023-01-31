@@ -31,6 +31,7 @@ module "s3" {
     ]
 }
 
+
 module "load_balancer" {
     source = "./load_balancer"
     unity_instance = "${var.unity_instance}"
@@ -43,6 +44,19 @@ module "load_balancer" {
     ]
 }
 
+
+module "core" {
+    source = "./core"
+    unity_instance = "${var.unity_instance}"
+    resource_prefix = "${var.resource_prefix}"
+    api_id = "${var.api_id}"
+    api_parent_id = "${var.api_parent_id}"
+
+    depends_on = [
+        module.load_balancer
+    ]
+}
+
 module "database" {
     source = "./database"
     unity_instance = "${var.unity_instance}"
@@ -51,7 +65,7 @@ module "database" {
     api_parent_id = "${var.api_parent_id}"
 
     depends_on = [
-        module.load_balancer
+        module.core
     ]
 }
 
@@ -77,19 +91,6 @@ module "elasticsearch" {
     depends_on = [
         module.es-log-groups
     ]
-}
-
-module "lambda" {
-    source = "./lambda"
-    unity_instance = "${var.unity_instance}"
-    resource_prefix = "${var.resource_prefix}"
-    api_id = "${var.api_id}"
-    api_parent_id = "${var.api_parent_id}"
-
-    depends_on = [
-        module.elasticsearch
-    ]
-
 }
 
 

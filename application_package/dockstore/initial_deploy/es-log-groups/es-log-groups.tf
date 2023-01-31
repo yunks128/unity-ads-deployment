@@ -6,7 +6,7 @@ resource "aws_cloudformation_stack" "es_log_groups" {
     LogGroupName = "/aws/aes/domains/${var.resource_prefix}-dockstore-elasticsearch/application-logs"
   }
 
-  template_body = file("${path.module}/es-log-groups-dev.yml")
+  template_body = file("${path.module}/es-log-groups.yml")
 
 }
 

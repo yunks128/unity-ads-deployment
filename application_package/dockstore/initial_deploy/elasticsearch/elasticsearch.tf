@@ -8,7 +8,7 @@ resource "aws_cloudformation_stack" "es" {
     SubnetId = tolist(data.aws_subnets.unity_private_subnets.ids)[0]
   }
 
-  template_body = file("${path.module}/elasticsearch-dev.yml")
+  template_body = file("${path.module}/elasticsearch.yml")
 
   timeout_in_minutes = 60
 }

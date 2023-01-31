@@ -8,7 +8,7 @@ resource "aws_cloudformation_stack" "log_group" {
      
   }
 
-  template_body = file("${path.module}/log-group-dev.yml")
+  template_body = file("${path.module}/log-group.yml")
 
 }
 

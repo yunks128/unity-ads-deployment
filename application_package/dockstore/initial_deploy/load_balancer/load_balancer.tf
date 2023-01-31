@@ -1,5 +1,5 @@
 resource "aws_cloudformation_stack" "dev" {
-  name = "awsDevDockstoreStack"
+  name = "awsLBDockstoreStack"
 
   parameters = {
     ResourcePrefix = "${var.resource_prefix}"
@@ -9,7 +9,7 @@ resource "aws_cloudformation_stack" "dev" {
   }
 
 
-  template_body = file("${path.module}/load_balancer-dev.yml")
+  template_body = file("${path.module}/load_balancer.yml")
 
 }
 

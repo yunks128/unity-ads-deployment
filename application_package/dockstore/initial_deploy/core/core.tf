@@ -11,9 +11,9 @@ resource "aws_cloudformation_stack" "core" {
   }
 
 
-  template_body = file("${path.module}/core-dev.yml")
+  template_body = file("${path.module}/core.yml")
   capabilities = ["CAPABILITY_NAMED_IAM", "CAPABILITY_IAM"]
-  timeout_in_minutes = 10
+  timeout_in_minutes = 60
 
 }
 
