@@ -408,20 +408,20 @@ Resources:
       AWS::CloudFormation::Init:
         configSets:
           setup_dockstore:
-          - install_dockstore
-          - add_cron_job
+           - install_dockstore
+           - add_cron_job
           setup_collectd:
-          - move_files
+           - move_files
           cw_agent_default:
-          - setup_cfn_hup
-          - config_cw_agent
-          - restart_cw_agent
+           - setup_cfn_hup
+           - config_cw_agent
+           - restart_cw_agent
           cw_agent_update_environment:
-          - config_cw_agent
-          - restart_cw_agent
+           - config_cw_agent
+           - restart_cw_agent
           harden_server:
-          - config_sysctl
-          - empty_securetty
+           - config_sysctl
+           - empty_securetty
         move_files:
           files:
               "/etc/collectd/collectd.conf":
@@ -714,7 +714,7 @@ Resources:
                 [cfn-auto-reloader-hook]
                 triggers=post.update
                 path=Resources.DockstoreInstance.Metadata.AWS::CloudFormation::Init.config_cw_agent
-                action=/usr/local/bin/cfn-init -v --stack ${AWS::StackId} --resource DockstoreInstance --region ${AWS::Region} --configsets cw_agent_update_environment
+                action=/usr/local/bin/cfn-init -v --stack ${AWS::StackName} --resource DockstoreInstance --region ${AWS::Region} --configsets cw_agent_update_environment
                 runas=root
               mode: '000400'
               owner: root
@@ -793,10 +793,10 @@ Resources:
 
           # Update and upgrade software before anything else
           # (This does not handle the case of a reboot being required)
-          DEBIAN_FRONTEND=noninteractive apt-get -qq -y update
+          DEBIAN_PRIORITY=critical DEBIAN_FRONTEND=noninteractive apt-get -qq -y update
           # Use the --with-new-pkgs flag to force aws-linux and friends to update as well
-          DEBIAN_FRONTEND=noninteractive apt-get -qq -y --with-new-pkgs upgrade
-
+          #DEBIAN_FRONTEND=noninteractive apt-get -qq -y --with-new-pkgs upgrade
+          DEBIAN_PRIORITY=critical DEBIAN_FRONTEND=noninteractive apt-get -qy -o "Dpkg::Options::=--force-confdef" -o "Dpkg::Options::=--force-confold" upgrade
           # Disable all services that automatically update software
           systemctl disable apt-daily.timer
           systemctl stop apt-daily.timer
@@ -836,6 +836,7 @@ Resources:
           chmod ugo+x /usr/local/bin/docker-compose
           # Up the vm.max_map_count for ElasticSearch
           echo "vm.max_map_count=262144" >> /etc/sysctl.conf
+          echo "ipv6.disable=1 "  >> /etc/sysctl.conf
           # Reads from /etc/sysctl.conf
           sysctl -p
           # Install aws cli here, so it will be available for SSM associations
@@ -855,7 +856,7 @@ Resources:
           systemctl restart ssh
 
           /usr/local/bin/cfn-init -v --stack ${AWS::StackName} --resource DockstoreInstance --configsets setup_dockstore,setup_collectd,cw_agent_default,harden_server --region ${AWS::Region}
-          /usr/local/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource DockstoreInstance --region ${AWS::Region}
+          /usr/local/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource DockstoreInstance --region ${AWS::Region}
     CreationPolicy:
       ResourceSignal:
         Timeout: PT30M
