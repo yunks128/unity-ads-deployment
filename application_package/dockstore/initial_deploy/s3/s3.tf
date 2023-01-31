@@ -10,7 +10,7 @@ resource "aws_cloudformation_stack" "s3" {
 
 
   template_body = file("${path.module}/s3.yml")
-  iam_role_arn = "arn:aws:iam::237868187491:role/uads-dockstore-cf-role"
+  #iam_role_arn = "arn:aws:iam::237868187491:role/uads-dockstore-cf-role"
   capabilities = ["CAPABILITY_NAMED_IAM", "CAPABILITY_IAM"]
 
 }

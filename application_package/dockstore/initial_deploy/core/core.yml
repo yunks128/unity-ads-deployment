@@ -107,6 +107,7 @@ Resources:
   DockstoreInstanceRole:
     Type: AWS::IAM::Role
     Properties:
+      RoleName: DockstoreInstanceRole
       PermissionsBoundary: !Sub "arn:aws:iam::${AWS::AccountId}:policy/mcp-tenantOperator-AMI-APIG"
       AssumeRolePolicyDocument:
         Version: 2012-10-17
