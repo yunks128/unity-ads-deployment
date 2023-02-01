@@ -5,6 +5,8 @@ resource "aws_cloudformation_stack" "dockstore_app_lambda" {
     DockstoreLambdaBucket = "uads-${var.resource_prefix}-dockstore-lambda-bucket"
     DockstoreToken = "${var.dockstore_token}"
     DockstoreApiUrl = "${var.dockstore_api_url}"
+    LoadBalancerStack = "awsLBDockstoreStack"
+    CoreStack = "awsCoreDockstoreStack"
 
     #These inputs are AWS Session Manager Parameter Store paths
     SecretToken = "/DeploymentConfig/${var.resource_prefix}/SecretToken"

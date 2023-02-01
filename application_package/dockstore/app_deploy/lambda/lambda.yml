@@ -66,6 +66,14 @@ Parameters:
     Default: 12
     MinValue: 0
     MaxValue: 1000
+  LoadBalancerStack:
+    Description: The name of the check url exists stack.
+    Type: String
+    MinLength: 1
+  CoreStack:
+    Description: The name of the core stack.
+    Type: String
+    MinLength: 1
   DockstoreApiUrl:
     Description: The fully qualified base url for the Dockstore API trailing slash required, e.g., https://.dockstore.net/api/
     Type: String 
@@ -131,13 +139,13 @@ Resources:
                   - ':'
                   - !Ref 'AWS::AccountId'
                   - ':'
-                  - Fn::ImportValue: !Sub '$${CoreStack}-WebhookQueueName'
+                  - Fn::ImportValue: !Sub '${CoreStack}-WebhookQueueName'
             - Effect: Allow
               Action: sqs:SendMessage
              Resource: !GetAtt 'GitHubLambdaDeadQueue.Arn'
       Tags:
         - Key: Name
-          Value: !Sub '$${AWS::StackName}-lambda-github'
+          Value: !Sub '${AWS::StackName}-lambda-github'
         - Key: Environment
           Value: ''
 
@@ -145,7 +153,7 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Description: A lambda that invokes the Dockstore API with GitHub updates
-      FunctionName: !Sub 'upsertGithubPush-$${AWS::StackName}'
+      FunctionName: !Sub 'upsertGithubPush-${AWS::StackName}'
       Handler: index.handler
       DeadLetterConfig:
         TargetArn: !GetAtt 'GitHubLambdaDeadQueue.Arn'
@@ -153,6 +161,11 @@ Resources:
         Variables:
           DOCKSTORE_TOKEN: !Ref DockstoreToken
           API_URL: !Ref DockstoreApiUrl
+          #API_URL: !Join
+          #  - ''
+          #  - - 'http://'
+          #    - Fn::ImportValue: !Sub '${LoadBalancerStack}-LBDNSName'
+          #    - ':9998/api/'
           SECRET_TOKEN: !Ref SecretToken
       Code:
         S3Bucket: !Ref DockstoreLambdaBucket
@@ -163,14 +176,14 @@ Resources:
       Timeout: 900
       Tags:
         - Key: Name
-          Value: !Sub '$${AWS::StackName}-lambda-github-queue'
+          Value: !Sub '${AWS::StackName}-lambda-github-queue'
         - Key: Environment
           Value: ''
 
   GitHubLambdaDeadQueue:
     Type: AWS::SQS::Queue
     Properties:
-      QueueName: !Sub 'upsertGithubPush-$${AWS::StackName}-dead'
+      QueueName: !Sub 'upsertGithubPush-${AWS::StackName}-dead'
       DelaySeconds: 2
       MessageRetentionPeriod: 1209600
       ReceiveMessageWaitTimeSeconds: 20
@@ -178,7 +191,7 @@ Resources:
       KmsMasterKeyId: "alias/aws/sqs"
       Tags:
         - Key: Name
-          Value: !Sub '$${AWS::StackName}-github-lambda-dead-queue'
+          Value: !Sub '${AWS::StackName}-github-lambda-dead-queue'
         - Key: Environment
           Value: ''
 
@@ -194,7 +207,7 @@ Resources:
           - ':'
           - !Ref 'AWS::AccountId'
           - ':'
-          - Fn::ImportValue: !Sub '$${CoreStack}-WebhookQueueName'
+          - Fn::ImportValue: !Sub '${CoreStack}-WebhookQueueName'
       FunctionName: !GetAtt GitHubQueueLambda.Arn
 
  

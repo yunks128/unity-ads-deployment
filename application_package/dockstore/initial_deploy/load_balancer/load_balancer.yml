@@ -110,6 +110,8 @@ Outputs:
   LoadBalancerDNSName:
     Description: The DNSName of the load balancer; use it in Route53
     Value: !GetAtt LoadBalancer.DNSName
+    Export:
+        Name: !Sub '${AWS::StackName}-LBDNSName'
   LBSecurityGroup:
     Description: The Load Balancer's security group
     Value: !Ref LbSecurityGroup

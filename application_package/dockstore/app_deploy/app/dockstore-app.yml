@@ -466,7 +466,8 @@ Resources:
               ruby-mustache: ["1.0.2-1"]
               jq: []
               collectd-core: []
-              libyajl-: []
+              libyajl2: []
+              libyajl-dev: []
           groups:
             docker: {}
           users:
@@ -475,14 +476,14 @@ Resources:
                 - docker
           sources:
             "/home/ubuntu/compose_setup": !Sub 'https://github.com/dockstore/compose_setup/tarball/${ComposeSetupVersion}'
-            "/home/ubuntu/github-key": !Join
-              - ''
-              - - 'https://'
-                - Fn::ImportValue: !Sub '${S3Stack}-S3BucketName'
-                - '.s3.'
-                - !Ref 'AWS::Region'
-                - '.amazonaws.com'
-                - '/bootstrap/jpl-uads-dockstore.2022-06-07.private-key.pem.tar.gz'
+            #"/home/ubuntu/github-key": !Join
+            #  - ''
+            #  - - 'https://'
+            #    - Fn::ImportValue: !Sub '${S3Stack}-S3BucketName'
+            #    - '.s3.'
+            #    - !Ref 'AWS::Region'
+            #    - '.amazonaws.com'
+            #    - '/bootstrap/dockstore-github-private-key.pem.tar.gz'
           files:
             "/home/ubuntu/compose_setup/dockstore_launcher_config/compose.config":
               content: !Sub
@@ -497,7 +498,7 @@ Resources:
                   "DOMAIN_NAME":"${AppUrl}",
                   "GITHUB_APP_ID":"${GitHubAppId}",
                   "GITHUB_APP_NAME":"${GitHubAppName}",
-                  "GITHUB_APP_PRIVATE_KEY_FILE":"/home/ubuntu/github-key/jpl-uads-dockstore.2022-06-07.private-key.pem",
+                  "GITHUB_APP_PRIVATE_KEY_FILE":"/home/ubuntu/github-key/dockstore-github-private-key.pem",
                   "GITHUB_CLIENT2_ID":"${GitHubClientId}",
                   "GITHUB_CLIENT2_SECRET":"${GitHubClientSecret}",
                   "HTTPS": false,
@@ -507,21 +508,85 @@ Resources:
                   "PUBLIC_LAUNCHER_IP_ADDRESS":"",
                   "TAG_MANAGER_ID":"${TagManagerId}",
                   "TOOLTESTER_BUCKET_NAME":"${ToolTesterBucketName}",
-                  "UI2_HASH":"${UiVersion}"
+                  "UI2_HASH":"${UiVersion}",
+                  "BD_CATALYST_SEVEN_BRIDGES_IMPORT_URL":"${BdCatalystSevenBridgesImportUrl}",
+                  "BD_CATALYST_TERRA_IMPORT_URL":"${BdCatalystTerraImportUrl}",
+                  "BITBUCKET_CLIENT_ID":"${BitbucketClientId}",
+                  "BITBUCKET_CLIENT_SECRET":"${BitbucketClientSecret}",
+                  "CHECK_URL_EXISTS_ENDPOINT":"",
+                  "CHECK_URL_LAMBDA_VERSION":"${CheckUrlLambdaVersion}",
+                  "CWL_PARSING_LAMBDA_VERSION":"${CWLParsingLambdaVersion}",
+                  "DISCOURSE_CATEGORY_ID": "${DiscourseCategoryId}",
+                  "DISCOURSE_KEY":"${DiscourseKey}",
+                  "DISCOURSE_URL":"${DiscourseUrl}",
+                  "DOCUMENTATION_URL":"${DocumentationUrl}",
+                  "ELASTICSEARCH_DOMAIN":"${ElasticsearchDomain}",
+                  "ELASTICSEARCH_PROTOCOL":"http",
+                  "ELASTICSEARCH_PORT":"80",
+                  "ELASTICSEARCH_USER":"",
+                  "ELASTICSEARCH_PASSWORD":"${ElasticsearchDomain}",
+                  "ELASTICSEARCH_MAX_CONCURRENT_SESSIONS":"${ElasticsearchMaxConcurrentSessions}",
+                  "EXTERNAL_GOOGLE_CLIENT_PREFIX1":"${ExternalGoogleClientPrefix}",
+                  "FEATURED_CONTENT_URL": "${FeaturedContentUrl}",
+                  "FEATURED_NEWS_URL": "${FeaturedNewsUrl}",
+                  "GALAXY_PLUGIN_VERSION":"${GalaxyPluginVersion}",
+                  "GITLAB_CLIENT_ID":"${GitLabClientId}",
+                  "GITLAB_CLIENT_SECRET":"${GitLabClientSecret}",
+                  "GOOGLE_CLIENT_ID":"${GoogleClientId}",
+                  "GOOGLE_CLIENT_SECRET":"${GoogleClientSecret}",
+                  "NEXTFLOW_PARSING_LAMBDA_VERSION":"${NextflowParsingLambdaVersion}",
+                  "ORCID_CLIENT_ID":"${OrcidClientId}",
+                  "ORCID_CLIENT_SECRET":"${OrcidClientSecret}",
+                  "ORCID_URL":"${OrcidUrl}",
+                  "ORCID_SCOPE":"${OrcidScope}",
+                  "QUAY_CLIENT_ID":"${QuayClientId}",
+                  "QUAY_CLIENT_SECRET":"${QuayClientSecret}",
+                  "SAM_PATH":"${SamPath}",
+                  "TERRA_IMPORT_URL":"${TerraImportUrl}",
+                  "WDL_PARSING_LAMBDA_VERSION":"${WDLParsingLambdaVersion}",
+                  "ZENODO_CLIENT_ID": "${ZenodoClientId}",
+                  "ZENODO_CLIENT_SECRET": "${ZenodoClientSecret}",
+                  "ZENODO_URL": "${ZenodoUrl}"
                   }
                 - DatabaseDomain:
                     Fn::ImportValue:
                      !Sub "${RdsStack}-DBAddress"
+                  ElasticsearchDomain:
+                    Fn::ImportValue:
+                      !Sub "${ElasticsearchStack}-ESDomainEndpoint"
+                  #AppUrl:
+                  #  !Join
+                  #   - ''
+                  #   - - 'http://'
+                  #     - Fn::ImportValue: !Sub "${LoadBalancerStack}-LBDNSName"
+                  #     - ':9998/'
           commands:
             # Commands are executed alphabetically
-            "01_change_owner":
-              command: chown -R ubuntu:ubuntu compose_setup github-key
+            "01_make_dir":
+              command: mkdir github-key
               cwd: "/home/ubuntu"
-            "02_build":
+            "02_aws_cp":
+              command: 
+               !Join 
+                - ""
+                - - "aws s3 cp s3://"
+                  - Fn::ImportValue: !Sub "${S3Stack}-S3BucketName"
+                  - "/bootstrap/dockstore-github-private-key.pem.tar.gz ./github-key/"
+              cwd: "/home/ubuntu/"
+            "03_untar":
+              command: tar -xvf dockstore-github-private-key.pem.tar.gz
+              cwd: "/home/ubuntu/github-key/"
+            "04_change_owner":
+              command: chown -R ubuntu:ubuntu compose_setup github-key
+              cwd: "/home/ubuntu/"
+            "05_mv":
+              command: sudo -u ubuntu mv -f docker-compose.dev.yml docker-compose.yml
+              cwd: "/home/ubuntu/compose_setup/"
+            "06_build":
               command: sudo -u ubuntu bash install_bootstrap --script
-              cwd: "/home/ubuntu/compose_setup"
-            "03_recreate":
-              cwd: "/home/ubuntu/compose_setup"
+              cwd: "/home/ubuntu/compose_setup/"
+            "07_recreate":
+              cwd: "/home/ubuntu/compose_setup/"
               command: sudo -u ubuntu nohup docker-compose up --force-recreate --remove-orphans -d &
         add_cron_job:
           files:
@@ -754,7 +819,7 @@ Resources:
             01_empty_securetty_doit:
               command: cat /test/null > /etc/securetty
       AWS::CloudFormation::Authentication:
-        rolebased:
+        S3AccessCreds:
           type: S3
           buckets:
             Fn::ImportValue: !Sub '${S3Stack}-S3BucketName'
@@ -836,7 +901,7 @@ Resources:
           chmod ugo+x /usr/local/bin/docker-compose
           # Up the vm.max_map_count for ElasticSearch
           echo "vm.max_map_count=262144" >> /etc/sysctl.conf
-          echo "ipv6.disable=1 "  >> /etc/sysctl.conf
+          sed -i 's/.*ipv6.*//g' /etc/sysctl.conf
           # Reads from /etc/sysctl.conf
           sysctl -p
           # Install aws cli here, so it will be available for SSM associations
@@ -885,6 +950,12 @@ Resources:
            Fn::ImportValue: !Sub "${LoadBalancerStack}-LBSecurityGroup"
           ToPort: 9999
           FromPort: 9999
+          IpProtocol: tcp
+        - Description: Allow inbound traffic from Load Balancer on port 443
+          SourceSecurityGroupId: 
+           Fn::ImportValue: !Sub "${LoadBalancerStack}-LBSecurityGroup"
+          ToPort: 443
+          FromPort: 443
           IpProtocol: tcp
       SecurityGroupEgress:
         - Description: Allow outbound http traffic (for aptitude) - see SEAB-3387
