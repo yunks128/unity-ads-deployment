@@ -62,9 +62,9 @@ Parameters:
     Description: Env prefix (dev or test)
     Type: String
     Default: 'dev'
-  AppUrl:
-    Description: Application URL
-    Type: String
+  #AppUrl:
+  #  Description: Application URL
+  #  Type: String
   AutoUpdate:
     Description: Whether the webservice and UI should update themselves nightly. Set to false for staging and prod!
     Type: String
@@ -117,7 +117,7 @@ Parameters:
   WebserviceTag:
     Description: The webservice quay.io tag on https://quay.io/repository/dockstore/dockstore-webservice?tab=tags. Only specify the tag, e.g., elop
     Type: String
-    Default: elop
+    Default: "1.12.0"
   UiVersion:
     Description: The UI version; must be available via CloudFront
     Type: String
@@ -399,7 +399,7 @@ Resources:
     Type: "AWS::IAM::InstanceProfile"
     Properties:
       Roles: 
-       - "awsCoreDockstoreStack-DockstoreInstanceRole-22VR3PEUJ58U" 
+       - "DockstoreInstanceRole" 
 
 
   DockstoreInstance:
@@ -421,7 +421,7 @@ Resources:
            - restart_cw_agent
           harden_server:
            - config_sysctl
-           - empty_securetty
+          #- empty_securetty
         move_files:
           files:
               "/etc/collectd/collectd.conf":
@@ -493,6 +493,7 @@ Resources:
                   "COMPOSE_SETUP_VERSION":"${ComposeSetupVersion}",
                   "DEPLOY_VERSION":"1.12.3",
                   "DATABASE_DOMAIN":"${DatabaseDomain}",
+                  "DATABASE_GENERATED" : true,
                   "DOCKSTORE_DBPASSWORD":"${DBDockstoreUserPassword}",
                   "DOCKSTORE_VERSION":"${WebserviceTag}",
                   "DOMAIN_NAME":"${AppUrl}",
@@ -554,12 +555,12 @@ Resources:
                   ElasticsearchDomain:
                     Fn::ImportValue:
                       !Sub "${ElasticsearchStack}-ESDomainEndpoint"
-                  #AppUrl:
-                  #  !Join
-                  #   - ''
-                  #   - - 'http://'
-                  #     - Fn::ImportValue: !Sub "${LoadBalancerStack}-LBDNSName"
-                  #     - ':9998/'
+                  AppUrl:
+                    !Join
+                     - ''
+                     - - 'http://'
+                       - Fn::ImportValue: !Sub "${LoadBalancerStack}-LBDNSName"
+                       - ':9998/'
           commands:
             # Commands are executed alphabetically
             "01_make_dir":
@@ -579,15 +580,42 @@ Resources:
             "04_change_owner":
               command: chown -R ubuntu:ubuntu compose_setup github-key
               cwd: "/home/ubuntu/"
-            "05_mv":
-              command: sudo -u ubuntu mv -f docker-compose.dev.yml docker-compose.yml
-              cwd: "/home/ubuntu/compose_setup/"
-            "06_build":
+            "05_build":
               command: sudo -u ubuntu bash install_bootstrap --script
               cwd: "/home/ubuntu/compose_setup/"
-            "07_recreate":
+            "06_aws_cp_2":
+              command:
+               !Join 
+                - ""
+                - - "aws s3 cp s3://"
+                  - Fn::ImportValue: !Sub "${S3Stack}-S3BucketName"
+                  - "/bootstrap/default.nginx_http.conf ./config/"
               cwd: "/home/ubuntu/compose_setup/"
-              command: sudo -u ubuntu nohup docker-compose up --force-recreate --remove-orphans -d &
+            "07_aws_cp_3":
+              command:
+               !Join
+                - ""
+                - - "aws s3 cp s3://"
+                  - Fn::ImportValue: !Sub "${S3Stack}-S3BucketName"
+                  - "/bootstrap/default.nginx_http.security.conf ./config/"
+              cwd: "/home/ubuntu/compose_setup/"
+            "08_sed_1":
+              command: newip=`ifconfig  | grep -Eo '([0-9]*\.){3}[0-9]*' |  grep -v ^172 | grep -v 255 | grep -v ^127 | xargs echo` sed -i "s/10.52.14.72/${newip}/" config/default.nginx_http.*
+              cwd: "/home/ubuntu/compose_setup/"
+            "09_sed_2":
+              command: 
+               !Join
+               - ""
+               - - "sed -i ’s/uads-test-dockstore-deploy-lb-1762603872.us-west-2.elb.amazonaws.com/"
+                 - Fn::ImportValue: !Sub "${LoadBalancerStack}-LBDNSName"
+                 - "/g' config/default.nginx_http.*"
+              cwd: "/home/ubuntu/compose_setup/"
+            "10_build_dock":
+              command: sudo -u ubuntu LOG_GROUP_NAME=awsagent-update.log docker-compose -f docker-compose.yml -f docker-compose.dev.yml build
+              cwd: "/home/ubuntu/compose_setup/"
+            "11_recreate":
+              cwd: "/home/ubuntu/compose_setup/"
+              command: sudo -u ubuntu LOG_GROUP_NAME=awsagent-update.log nohup docker-compose up --force-recreate --remove-orphans -d &
         add_cron_job:
           files:
             "/home/ubuntu/updateDockstore.sh":
@@ -632,7 +660,7 @@ Resources:
                 OLD_UI2_HASH="\"UI2_HASH\":\".*\""
                 sed -i "s/$OLD_UI2_HASH/$NEW_UI2_HASH/" dockstore_launcher_config/compose.config
 
-                docker-compose down
+                LOG_GROUP_NAME=awsagent-update.log docker-compose down
 
                 # Because elop is a floating tag, remove the local image
                 docker image rm quay.io/dockstore/dockstore-webservice:${WebserviceTag}
@@ -641,7 +669,7 @@ Resources:
                 bash install_bootstrap --script
 
                 # Bring it back up
-                nohup docker-compose up --force-recreate --remove-orphans &
+                LOG_GROUP_NAME=awsagent-update.log nohup docker-compose up --force-recreate --remove-orphans &
               mode: "774"
               owner: ubuntu
               group: ubuntu
@@ -813,11 +841,11 @@ Resources:
               command: echo "net.ipv4.tcp_syncookies = 1" >> /etc/sysctl.conf
             06_config_sysctl_reload:
               command: sysctl -p
-        empty_securetty:
-          commands:
-            # This will restrict root access to single user mode (does not affect SSH)
-            01_empty_securetty_doit:
-              command: cat /test/null > /etc/securetty
+        #empty_securetty:
+        #  commands:
+        #    # This will restrict root access to single user mode (does not affect SSH)
+        #    01_empty_securetty_doit:
+        #      command: cat /test/null > /etc/securetty
       AWS::CloudFormation::Authentication:
         S3AccessCreds:
           type: S3
@@ -906,7 +934,8 @@ Resources:
           sysctl -p
           # Install aws cli here, so it will be available for SSM associations
           sudo -u ubuntu curl -s "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
-          apt-get -y install unzip
+          apt-get -y install unzip net-tools
+
           unzip -q /tmp/awscliv2.zip -d /tmp
           /tmp/aws/install
           rm -f /tmp/awscliv2.zip

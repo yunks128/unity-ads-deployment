@@ -4,7 +4,6 @@ resource "aws_cloudformation_stack" "dockstore_app" {
   disable_rollback = true
 
   parameters = {
-    AppUrl = "${var.app_url}"
     ResourcePrefix = "${var.resource_prefix}"
     VpcId = data.aws_vpc.unity_vpc.id
     SubnetId = tolist(data.aws_subnets.unity_private_subnets.ids)[0]

@@ -82,6 +82,35 @@ resource "aws_s3_object" "github_key" {
 }
 
 
+resource "aws_s3_object" "nginx_key_1" {
+  bucket = "uads-${var.resource_prefix}-dockstore-startup"
+
+  key    = "bootstrap/default.nginx_http.security.conf"
+  source = "${path.module}/default.nginx_http.security.conf"
+
+  etag = filemd5("${path.module}/default.nginx_http.security.conf")
+
+
+    depends_on = [
+    aws_cloudformation_stack.s3
+  ]
+}
+
+resource "aws_s3_object" "nginx_key_2" {
+  bucket = "uads-${var.resource_prefix}-dockstore-startup"
+
+  key    = "bootstrap/default.nginx_http.conf"
+  source = "${path.module}/default.nginx_http.conf"
+
+  etag = filemd5("${path.module}/default.nginx_http.conf")
+
+
+    depends_on = [
+    aws_cloudformation_stack.s3
+  ]
+}
+
+
 
 
 
