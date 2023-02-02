@@ -78,4 +78,7 @@ resource "kubernetes_persistent_volume_claim" "dev_support_shared_volume_claim" 
     }
     volume_name = "${kubernetes_persistent_volume.dev_support_shared_volume.metadata.0.name}"
   }
+
+  # Prevents a cycle with eks_cluster.jupyter_hub
+  depends_on = [ aws_efs_mount_target.dev_support_efs_mt ]
 }
