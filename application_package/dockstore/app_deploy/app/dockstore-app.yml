@@ -619,18 +619,18 @@ Resources:
                  - "/g' config/default.nginx_http.*"
               cwd: "/home/ubuntu/compose_setup/"
             "11_sed_3":
-               command: sed -i 's/http:\/\/http:\/\//http:\/\//g' config/*
+               command: sed -i 's/http:\/\/http:\/\//http:\/\//g' config/web.yml
                cwd: "/home/ubuntu/compose_setup/"
             "12_sed_4":
                command: sed -i 's/:443//g' config/web.yml
                cwd: "/home/ubuntu/compose_setup/"
-            "12_sed_4":
+            "13_sed_5":
                command: 
                  !Join
                   - ""
-                  - - "sed -i 's/ gitHubRedirectPath: .*/ gitHubRedirectPath: http://'"
+                  - - "sed -i 's/ gitHubRedirectPath: .*/ gitHubRedirectPath: http:\\/\\/"
                     - Fn::ImportValue: !Sub "${LoadBalancerStack}-LBDNSName"
-                    - ":9998 config/web.yml"
+                    - ":9998\\//' config/web.yml"
                cwd: "/home/ubuntu/compose_setup/"
             "14_build_dock":
               command: sudo -u ubuntu LOG_GROUP_NAME=awsagent-update.log docker-compose -f docker-compose.yml -f docker-compose.dev.yml build
@@ -930,7 +930,7 @@ Resources:
 
           # Install python3 and pip3
           apt-get -qq -y install python3-pip
-
+          apt install -y postgresql-client-common postgresql-client-12
           # Install cfn-bootstrap
           wget --quiet https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-py3-2.0-6.tar.gz -O /root/aws-cfn-bootstrap.tar.gz 
           tar xzf /root/aws-cfn-bootstrap.tar.gz -C /root
@@ -970,7 +970,7 @@ Resources:
           hostnamectl set-hostname "Dockstore--${AWS::StackName}" --pretty
           echo "PermitRootLogin no" >> /etc/ssh/sshd_config
           systemctl restart ssh
-
+          ufw disable
           /usr/local/bin/cfn-init -v --stack ${AWS::StackName} --resource DockstoreInstance --configsets setup_dockstore,setup_collectd,cw_agent_default,harden_server --region ${AWS::Region}
           /usr/local/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource DockstoreInstance --region ${AWS::Region}
     CreationPolicy:
@@ -985,55 +985,15 @@ Resources:
       GroupDescription: Enable TCP access from LoadBalancer to ports 80
       SecurityGroupIngress:
         - Description: Allow inbound traffic from the load balancer to the EC2 instance on port 80
-          SourceSecurityGroupId: 
-           Fn::ImportValue: !Sub "${LoadBalancerStack}-LBSecurityGroup"
-          ToPort: 80
-          FromPort: 80
-          IpProtocol: tcp
-        - Description: Allow inbound traffic from the load balancer to on port 9998
-          SourceSecurityGroupId: 
-           Fn::ImportValue: !Sub "${LoadBalancerStack}-LBSecurityGroup"
-          ToPort: 9998
-          FromPort: 9998
-          IpProtocol: tcp
-        - Description: Allow inbound traffic from Load Balancer on port 9999
-          SourceSecurityGroupId: 
-           Fn::ImportValue: !Sub "${LoadBalancerStack}-LBSecurityGroup"
-          ToPort: 9999
-          FromPort: 9999
-          IpProtocol: tcp
-        - Description: Allow inbound traffic from Load Balancer on port 443
-          SourceSecurityGroupId: 
-           Fn::ImportValue: !Sub "${LoadBalancerStack}-LBSecurityGroup"
-          ToPort: 443
-          FromPort: 443
+          CidrIp: 0.0.0.0/0
+          ToPort: 65535
+          FromPort: 1
           IpProtocol: tcp
       SecurityGroupEgress:
         - Description: Allow outbound http traffic (for aptitude) - see SEAB-3387
           CidrIp: 0.0.0.0/0
-          ToPort: 80
-          FromPort: 80
-          IpProtocol: tcp
-        - Description: Allow outbound https traffic for Webservice functionality and AWS Service endpoints
-          CidrIp: 0.0.0.0/0
-          ToPort: 443
-          FromPort: 443
-          IpProtocol: tcp
-        - Description: Allow outbound https traffic for Webservice functionality and AWS Service endpoints
-          CidrIp: 0.0.0.0/0
-          ToPort: 9999
-          FromPort: 9999
-          IpProtocol: tcp
-        - Description: Allow outbound https traffic for Webservice functionality and AWS Service endpoints
-          CidrIp: 0.0.0.0/0
-          ToPort: 9998
-          FromPort: 9998
-          IpProtocol: tcp
-        - Description: Allow outbound traffic to PostgreSQL
-          DestinationSecurityGroupId:
-            Fn::ImportValue: !Sub '${RdsStack}-DBSecurityGroup'
-          ToPort: 5432
-          FromPort: 5432
+          ToPort: 65535
+          FromPort: 1
           IpProtocol: tcp
         - Description: Allow outbound NTP traffic
           CidrIp: 0.0.0.0/0
