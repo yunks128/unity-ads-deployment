@@ -74,10 +74,6 @@ Parameters:
     Description: The name of the core stack.
     Type: String
     MinLength: 1
-  DockstoreApiUrl:
-    Description: The fully qualified base url for the Dockstore API trailing slash required, e.g., https://.dockstore.net/api/
-    Type: String 
-    Default: "" 
   DockstoreToken:
     Description: The Dockstore token used by the lambda to make API calls to Dockstore
     Type: String 
@@ -141,8 +137,9 @@ Resources:
                   - ':'
                   - Fn::ImportValue: !Sub '${CoreStack}-WebhookQueueName'
             - Effect: Allow
-              Action: sqs:SendMessage
-             Resource: !GetAtt 'GitHubLambdaDeadQueue.Arn'
+              Action: 
+              - sqs:SendMessage
+              Resource: !GetAtt 'GitHubLambdaDeadQueue.Arn'
       Tags:
         - Key: Name
           Value: !Sub '${AWS::StackName}-lambda-github'
@@ -160,12 +157,11 @@ Resources:
       Environment:
         Variables:
           DOCKSTORE_TOKEN: !Ref DockstoreToken
-          API_URL: !Ref DockstoreApiUrl
-          #API_URL: !Join
-          #  - ''
-          #  - - 'http://'
-          #    - Fn::ImportValue: !Sub '${LoadBalancerStack}-LBDNSName'
-          #    - ':9998/api/'
+          API_URL: !Join
+            - ''
+            - - 'http://'
+              - Fn::ImportValue: !Sub '${LoadBalancerStack}-LBDNSName'
+              - ':9998/api/'
           SECRET_TOKEN: !Ref SecretToken
       Code:
         S3Bucket: !Ref DockstoreLambdaBucket

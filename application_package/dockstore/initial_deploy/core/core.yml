@@ -143,9 +143,10 @@ Resources:
         - !Ref DockstoreInstanceRole 
 
 
-  ApiGatewayLogsRole:
+  ApiGatewayRole:
     Type: AWS::IAM::Role
     Properties:
+      RoleName: 
       PermissionsBoundary: !Sub "arn:aws:iam::${AWS::AccountId}:policy/mcp-tenantOperator-AMI-APIG"
       AssumeRolePolicyDocument:
         Version: 2012-10-17
@@ -157,17 +158,6 @@ Resources:
       ManagedPolicyArns: 
         - "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs" 
 
-  ApiGatewaySqsSendMessageRole:
-    Type: AWS::IAM::Role
-    Properties:
-      PermissionsBoundary: !Sub "arn:aws:iam::${AWS::AccountId}:policy/mcp-tenantOperator-AMI-APIG"
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: "apigateway.amazonaws.com"
-            Action: 'sts:AssumeRole'
         
   ApiGatewaySqsSendMessagePolicy:
     Type: AWS::IAM::Policy
@@ -185,7 +175,7 @@ Resources:
             Resource:
               - "*"
       Roles:  
-        - !Ref ApiGatewaySqsSendMessageRole
+        - !Ref ApiGatewayRole
               
 
   DockstoreResource:
@@ -218,7 +208,7 @@ Resources:
       AuthorizationType: NONE
       HttpMethod: POST
       Integration:
-        Credentials: !Sub "arn:aws:iam::237868187491:role/uads-dockstore-${ResourcePrefix}-apigw"
+        Credentials: !GetAtt ApiGatewayRole.Arn
         IntegrationHttpMethod: POST
         IntegrationResponses:
           - StatusCode: '200'

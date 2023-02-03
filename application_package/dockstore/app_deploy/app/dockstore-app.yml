@@ -522,11 +522,11 @@ Resources:
                   "DISCOURSE_URL":"${DiscourseUrl}",
                   "DOCUMENTATION_URL":"${DocumentationUrl}",
                   "ELASTICSEARCH_DOMAIN":"${ElasticsearchDomain}",
-                  "ELASTICSEARCH_PROTOCOL":"http",
-                  "ELASTICSEARCH_PORT":"80",
-                  "ELASTICSEARCH_USER":"",
-                  "ELASTICSEARCH_PASSWORD":"${ElasticsearchDomain}",
-                  "ELASTICSEARCH_MAX_CONCURRENT_SESSIONS":"${ElasticsearchMaxConcurrentSessions}",
+                  "ELASTICSEARCH_PROTOCOL":"https",
+                  "ELASTICSEARCH_PORT":"443",
+                  "ELASTICSEARCH_USER":"ES_DELETE",
+                  "ELASTICSEARCH_PASSWORD":"ES_DELETE",
+                  "ELASTICSEARCH_MAX_CONCURRENT_SESSIONS":"ES_DELETE",
                   "EXTERNAL_GOOGLE_CLIENT_PREFIX1":"${ExternalGoogleClientPrefix}",
                   "FEATURED_CONTENT_URL": "${FeaturedContentUrl}",
                   "FEATURED_NEWS_URL": "${FeaturedNewsUrl}",
@@ -632,10 +632,25 @@ Resources:
                     - Fn::ImportValue: !Sub "${LoadBalancerStack}-LBDNSName"
                     - ":9998\\//' config/web.yml"
                cwd: "/home/ubuntu/compose_setup/"
-            "14_build_dock":
+
+            "14_index_1":
+               command:
+                !Join
+                - ""
+                - - "curl -X PUT \""
+                  - Fn::ImportValue: !Sub "${ElasticsearchStack}-ESDomainEndpoint"
+                  - "/workflows\" -H 'Content-Type: application/json' -d'{ \"settings\" : { \"index\" : {} }}'"
+            "15_index_2":
+               command:
+                !Join
+                - "" 
+                - - "curl -X PUT \""
+                  - Fn::ImportValue: !Sub "${ElasticsearchStack}-ESDomainEndpoint"
+                  - "/tools\" -H 'Content-Type: application/json' -d'{ \"settings\" : { \"index\" : {} }}'"
+            "16_build_dock":
               command: sudo -u ubuntu LOG_GROUP_NAME=awsagent-update.log docker-compose -f docker-compose.yml -f docker-compose.dev.yml build
               cwd: "/home/ubuntu/compose_setup/"
-            "15_recreate":
+            "17_recreate":
               cwd: "/home/ubuntu/compose_setup/"
               command: sudo -u ubuntu LOG_GROUP_NAME=awsagent-update.log nohup docker-compose up --force-recreate --remove-orphans -d &
         add_cron_job:
@@ -987,13 +1002,13 @@ Resources:
         - Description: Allow inbound traffic from the load balancer to the EC2 instance on port 80
           CidrIp: 0.0.0.0/0
           ToPort: 65535
-          FromPort: 1
+          FromPort: 124
           IpProtocol: tcp
       SecurityGroupEgress:
         - Description: Allow outbound http traffic (for aptitude) - see SEAB-3387
           CidrIp: 0.0.0.0/0
           ToPort: 65535
-          FromPort: 1
+          FromPort: 124
           IpProtocol: tcp
         - Description: Allow outbound NTP traffic
           CidrIp: 0.0.0.0/0
