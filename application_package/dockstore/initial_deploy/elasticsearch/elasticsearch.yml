@@ -32,6 +32,18 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Security Group for ElasticSearch
+      SecurityGroupIngress:
+        - Description: Allow inbound traffic from the load balancer to the EC2 instance on port 80
+          CidrIp: 0.0.0.0/0
+          ToPort: 65535
+          FromPort: 1
+          IpProtocol: tcp
+      SecurityGroupEgress:
+        - Description: Allow outbound http traffic (for aptitude) - see SEAB-3387
+          CidrIp: 0.0.0.0/0
+          ToPort: 65535
+          FromPort: 1
+          IpProtocol: tcp
       VpcId: !Ref VpcId 
       Tags:
         - Key: Environment
