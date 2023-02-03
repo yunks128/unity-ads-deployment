@@ -30,9 +30,5 @@ variable "galaxy_plugin_version" {
   default     = "0.0.7"
 }
 
-variable "app_url" {
-  description = "Dockstore App URL"
-  type        = string
-}
 
 
