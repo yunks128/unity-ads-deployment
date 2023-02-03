@@ -111,9 +111,18 @@ resource "aws_s3_object" "nginx_key_2" {
 }
 
 
+resource "aws_s3_object" "sed_script" {
+  bucket = "uads-${var.resource_prefix}-dockstore-startup"
 
+  key    = "bootstrap/sed_command.sh"
+  source = "${path.module}/sed_command.sh"
 
-
+  etag = filemd5("${path.module}/sed_command.sh")
+ 
+  depends_on = [
+    aws_cloudformation_stack.s3
+  ]
+}
 
 
 

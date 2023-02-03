@@ -599,21 +599,43 @@ Resources:
                   - Fn::ImportValue: !Sub "${S3Stack}-S3BucketName"
                   - "/bootstrap/default.nginx_http.security.conf ./config/"
               cwd: "/home/ubuntu/compose_setup/"
-            "08_sed_1":
-              command: newip=`ifconfig  | grep -Eo '([0-9]*\.){3}[0-9]*' |  grep -v ^172 | grep -v 255 | grep -v ^127 | xargs echo` sed -i "s/10.52.14.72/${newip}/" config/default.nginx_http.*
+            "08_aws_cp_3":
+              command:
+               !Join
+                - ""
+                - - "aws s3 cp s3://"
+                  - Fn::ImportValue: !Sub "${S3Stack}-S3BucketName"
+                  - "/bootstrap/sed_command.sh ./"
               cwd: "/home/ubuntu/compose_setup/"
-            "09_sed_2":
+            "09_run_script":
+              command: bash ./sed_command.sh
+              cwd: "/home/ubuntu/compose_setup/"
+            "10_sed_2":
               command: 
                !Join
                - ""
-               - - "sed -i ’s/uads-test-dockstore-deploy-lb-1762603872.us-west-2.elb.amazonaws.com/"
+               - - "sed -i 's/uads-test-dockstore-deploy-lb-1762603872.us-west-2.elb.amazonaws.com/"
                  - Fn::ImportValue: !Sub "${LoadBalancerStack}-LBDNSName"
                  - "/g' config/default.nginx_http.*"
               cwd: "/home/ubuntu/compose_setup/"
-            "10_build_dock":
+            "11_sed_3":
+               command: sed -i 's/http:\/\/http:\/\//http:\/\//g' config/*
+               cwd: "/home/ubuntu/compose_setup/"
+            "12_sed_4":
+               command: sed -i 's/:443//g' config/web.yml
+               cwd: "/home/ubuntu/compose_setup/"
+            "12_sed_4":
+               command: 
+                 !Join
+                  - ""
+                  - - "sed -i 's/ gitHubRedirectPath: .*/ gitHubRedirectPath: http://'"
+                    - Fn::ImportValue: !Sub "${LoadBalancerStack}-LBDNSName"
+                    - ":9998 config/web.yml"
+               cwd: "/home/ubuntu/compose_setup/"
+            "14_build_dock":
               command: sudo -u ubuntu LOG_GROUP_NAME=awsagent-update.log docker-compose -f docker-compose.yml -f docker-compose.dev.yml build
               cwd: "/home/ubuntu/compose_setup/"
-            "11_recreate":
+            "15_recreate":
               cwd: "/home/ubuntu/compose_setup/"
               command: sudo -u ubuntu LOG_GROUP_NAME=awsagent-update.log nohup docker-compose up --force-recreate --remove-orphans -d &
         add_cron_job:
