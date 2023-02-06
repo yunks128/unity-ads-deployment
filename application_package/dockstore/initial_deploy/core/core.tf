@@ -26,6 +26,10 @@ resource "aws_api_gateway_deployment" "ApiRedeploy" {
   lifecycle {
     create_before_destroy = true
   }
+
+  depends_on = [
+        aws_cloudformation_stack.core
+    ]
 }
 
 
