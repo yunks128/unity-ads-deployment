@@ -1,0 +1,508 @@
+# Commit: db4678a https://github.com/dockstore/dockstore-deploy/commits/db4678a
+Description: >
+  Manages WAF, API Gateway and its queues.
+
+Mappings:
+  Regions:
+    #us-east-1:
+    #  az1: 'us-east-1a'
+    #  az2: 'us-east-1b'
+    us-west-2:
+      az1: 'us-west-2a'
+      az2: 'us-west-2b'
+    #us-east-2:
+    #  az1: 'us-east-2a'
+    #  az2: 'us-east-2b'
+
+Parameters:
+
+  # API Gateway and Queue parameters
+  ResourcePrefix:
+    Description: The name of the env (dev or test)
+    Type: String
+    Default: 'dev'
+  RestApiId:
+    Description: The ID of the API from AWS
+    Type: String
+  TopParentId:
+    Description: The ID of the parent resource within the API to be updated
+    Type: String
+  WebhookQueueName:
+    Description: The name of the queue for the webhook
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /DeploymentConfig/dev/WebhookQueueName
+  DeadQueueName:
+    Description: The name of the dead queue
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /DeploymentConfig/dev/DeadQueueName
+  RateLimitPerIP:
+    Description: Rate limit per IP address over a 5 minute period
+    Type: Number
+    Default: 2000
+    MinValue: 100
+    MaxValue: 100000
+  WAFLogsBucketName:
+    Description: The name of the S3 bucket for storing WAF logs (will be created/modified).
+    Type: String
+    Default: uads-dev-waf-logs-dockstore
+  WAFLogsPrefix:
+    Description: The custom prefix to use in S3 Object keys. It's OK to leave this empty (for more info https://docs.aws.amazon.com/firehose/ladev/dev/s3-prefixes.html).
+    Default: ''
+    Type: String
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: 'API Gateway and Queue parameters'
+        Parameters:
+          - WebhookQueueName
+          - DeadQueueName
+          - RateLimitPerIP
+          - WAFLogsBucketName
+          - WAFLogsPrefix
+
+Resources:
+  # Queues' properties copied from existing deployments. Some values used:
+  # 262144 (bytes) = 256Kib
+  # 1209600 (seconds) = 14 days
+  # 3600 (seconds) = 1 hour
+
+  WebhookQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Ref WebhookQueueName
+      DelaySeconds: 60
+      MaximumMessageSize: 262144
+      MessageRetentionPeriod: 1209600
+      ReceiveMessageWaitTimeSeconds: 20
+      RedrivePolicy:
+        deadLetterTargetArn:
+          Fn::GetAtt:
+            - "DeadQueue"
+            - "Arn"
+        maxReceiveCount: 5
+      VisibilityTimeout: 3600
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-webhook-queue'
+        - Key: Environment
+          Value: !Ref ResourcePrefix
+
+  DeadQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Ref DeadQueueName
+      DelaySeconds: 2
+      MessageRetentionPeriod: 1209600
+      ReceiveMessageWaitTimeSeconds: 20
+      VisibilityTimeout: 3600
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-dead-queue'
+        - Key: Environment
+          Value: !Ref ResourcePrefix
+
+
+  DockstoreInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: DockstoreInstanceRole
+      PermissionsBoundary: !Sub "arn:aws:iam::${AWS::AccountId}:policy/mcp-tenantOperator-AMI-APIG"
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: "ec2.amazonaws.com"
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns: 
+        - !Sub "arn:aws:iam::${AWS::AccountId}:policy/DatalakeKinesisPolicy"
+        - !Sub "arn:aws:iam::${AWS::AccountId}:policy/McpToolsAccessPolicy"
+        - "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+        - "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+        - "arn:aws:iam::aws:policy/CloudWatchFullAccess"
+        - "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+        - "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
+        - "arn:aws:iam::aws:policy/AmazonSSMFullAccess"
+  
+  DockstoreEc2Policy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: dockstore-ec2-connect
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Action:
+              - "ec2-instance-connect:SendSSHPublicKey"
+              - "ec2:DescribeInstances"
+            Resource: 
+              - "*"
+      Roles:
+        - !Ref DockstoreInstanceRole 
+
+
+  ApiGatewayRole:
+    Type: AWS::IAM::Role
+    Properties:
+      PermissionsBoundary: !Sub "arn:aws:iam::${AWS::AccountId}:policy/mcp-tenantOperator-AMI-APIG"
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: "apigateway.amazonaws.com"
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns: 
+        - "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs" 
+
+        
+  ApiGatewaySqsSendMessagePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: apig-sqs-send-msg-policy
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Action:
+              - "logs:CreateLogStream"
+              - "logs:CreateLogGroup"
+              - "logs:PutLogEvents"
+              - "sqs:SendMessage"
+            Resource:
+              - "*"
+      Roles:  
+        - !Ref ApiGatewayRole
+              
+
+  DockstoreResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref RestApiId
+      ParentId: !Ref TopParentId
+      PathPart: dockstore
+  WebhooksResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref RestApiId
+      ParentId: !Ref DockstoreResource
+      PathPart: webhooks
+  GithubResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref RestApiId
+      ParentId: !Ref WebhooksResource
+      PathPart: github
+  EnqueueResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref RestApiId
+      ParentId: !Ref GithubResource
+      PathPart: enqueue
+  PostMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      HttpMethod: POST
+      Integration:
+        Credentials: !GetAtt ApiGatewayRole.Arn
+        IntegrationHttpMethod: POST
+        IntegrationResponses:
+          - StatusCode: '200'
+        PassthroughBehavior: NEVER
+        RequestParameters:
+          integration.request.header.Content-Type: '''application/x-www-form-urlencoded'''
+        RequestTemplates:
+          application/json: |-
+            Action=SendMessage&MessageBody={
+                "payload": "$util.urlEncode($util.base64Encode($input.body))",
+                "user-agent" : "$input.params('User-Agent')",
+                "X-Hub-Signature" : "$input.params('X-Hub-Signature')",
+                "X-GitHub-Event" : "$input.params('X-GitHub-Event')"
+            }
+        TimeoutInMillis: 29000
+        Type: AWS
+        Uri: !Join
+          - ''
+          - - 'arn:aws:apigateway:'
+            - !Ref 'AWS::Region'
+            - :sqs:path/
+            - !Ref 'AWS::AccountId'
+            - /
+            - !Ref 'WebhookQueueName'
+      MethodResponses:
+        - ResponseModels:
+            application/json: Empty
+          StatusCode: "200"
+      RequestParameters:
+        method.request.header.User-Agent: true
+      ResourceId: !Ref EnqueueResource
+      RestApiId: !Ref RestApiId
+
+
+  # Web ACL resources
+  WAFLogsS3Bucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    Properties:
+      BucketName: !Ref WAFLogsBucketName
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-waf-logs-bucket'
+        - Key: Environment
+          Value: !Ref ResourcePrefix
+
+  WAFLogsDeliveryRole:
+    Type: AWS::IAM::Role
+    Properties:
+      PermissionsBoundary: !Sub "arn:aws:iam::${AWS::AccountId}:policy/mcp-tenantOperator-AMI-APIG"
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: firehose.amazonaws.com
+            Action: 'sts:AssumeRole'
+            Condition:
+              StringEquals:
+                'sts:ExternalId': !Ref 'AWS::AccountId'
+
+  WAFLogsDeliveryPolicy:
+   Type: AWS::IAM::Policy
+   Properties:
+      PolicyName: waf-logs-delivery-policy
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Action:
+              - "s3:AbortMultipartUpload"
+              - "s3:GetBucketLocation"
+              - "s3:GetObject"
+              - "s3:ListBucket"
+              - "s3:ListBucketMultipartUploads"
+              - "s3:PutObject"
+            Resource:
+              - !GetAtt WAFLogsS3Bucket.Arn
+              - !Join ['', [!GetAtt WAFLogsS3Bucket.Arn, '/*']]
+      Roles:
+        - !Ref WAFLogsDeliveryRole
+
+  WAFDeliveryStream:
+    DependsOn:
+      - WAFLogsDeliveryPolicy
+    Type: AWS::KinesisFirehose::DeliveryStream
+    Properties:
+      # Prepending 'aws-waf-logs-' makes it selectable from the WAF properties in the console
+      DeliveryStreamName: !Sub 'aws-waf-logs-${ResourcePrefix}'
+      ExtendedS3DestinationConfiguration:
+        BucketARN: !Join
+          - ''
+          - - 'arn:aws:s3:::'
+            - !Ref WAFLogsS3Bucket
+        BufferingHints:
+          IntervalInSeconds: 900
+          SizeInMBs: 64
+        CompressionFormat: UNCOMPRESSED
+        Prefix: !Ref WAFLogsPrefix
+        RoleARN: !GetAtt WAFLogsDeliveryRole.Arn
+        ProcessingConfiguration:
+          Enabled: false
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-waf-stream'
+        - Key: Environment
+          Value: !Ref ResourcePrefix
+
+  WebACL:
+    Type: AWS::WAFv2::WebACL
+    Properties:
+      DefaultAction:
+        Allow: {}
+      Name: !Sub 'WebACL-${AWS::StackName}'
+      Scope: REGIONAL
+      VisibilityConfig:
+        SampledRequestsEnabled: true
+        CloudWatchMetricsEnabled: true
+        MetricName: !Sub 'WebACLMetricFor-${AWS::StackName}'
+      Rules:
+        - Name: AWS-AWSManagedRulesAmazonIpReputationList
+          Priority: 0
+          OverrideAction:
+            None: {}
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: AWS-AWSManagedRulesAmazonIpReputationList
+          Statement:
+            ManagedRuleGroupStatement:
+              VendorName: AWS
+              Name: AWSManagedRulesAmazonIpReputationList
+        - Name: AWS-AWSManagedRulesCommonRuleSet
+          Priority: 1
+          OverrideAction:
+            None: {}
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+            MetricName: !Sub 'AWSManagedRulesCommonSetMetricFor-${AWS::StackName}'
+          Statement:
+            ManagedRuleGroupStatement:
+              ExcludedRules:
+                  # This heading contains rules, a description, and a justification for the setting.
+                  # If you exclude a rule, it will only count requests matching it.
+                  # Comment out the line with the rule to turn blocking on for that rule.
+                #- Name: NoUserAgent_HEADER
+                  # Blocks requests with no HTTP User-Agent header.
+                  # cURL requests put in a user-agent so this should be safe to turn on. Checking prod first.
+                #- Name: UserAgent_BadBots_HEADER
+                  # Inspects for the presence of common User-Agent header values indicating the request to be a
+                  # bad bot. Example patterns include nessus, and nmap.
+                  # Only bots use these headers in our deving so is likely safe to turn on.
+                #- Name: SizeRestrictions_QUERYSTRING
+                  # Verifies that the URI query string length is within the standard boundary for applications.
+                  # It is yet to be determined if querystring patterns in normal use would affect this.
+                #- Name: SizeRestrictions_Cookie_HEADER
+                  # Verifies that the cookie header length is within the bounds common for many applications.
+                  # We don't use cookies so it won't affect things either way.
+                - Name: SizeRestrictions_BODY
+                  # Verifies that the request body size is within the bounds common for many applications.
+                  # We may reach the large request bodies limit when adding descriptors.
+                - Name: SizeRestrictions_URIPATH
+                  # Verifies that the URI path length is within specification.
+                  # Sometimes the URI path is very long still and we need to support this.
+                #- Name: EC2MetaDataSSRF_BODY
+                  # Inspects for attempts to exfiltrate Amazon EC2 metadata from the request body.
+                  # We haven't determined if some workflows may contain SSRF looking strings.
+                #- Name: EC2MetaDataSSRF_COOKIE
+                  # Inspects for attempts to exfiltrate Amazon EC2 metadata from the request cookie.
+                  # We don't use cookies so this would be malicious
+                #- Name: EC2MetaDataSSRF_URIPATH
+                  # Inspects for attempts to exfiltrate Amazon EC2 metadata from the request URI path.
+                  # The only requests observed so far are malicious so likely can be turned on.
+                - Name: EC2MetaDataSSRF_QUERYARGUMENTS
+                  # Inspects for attempts to exfiltrate Amazon EC2 metadata from the request query arguments.
+                  # Our query arguments may include SSRF looking strings because of search.
+                - Name: GenericLFI_QUERYARGUMENTS
+                  # Inspects for the presence of Local File Inclusion (LFI) exploits in the query arguments.
+                  # Examples include path traversal attempts using techniques like ../../.
+                  # We do allow repository names to include LFI looking strings, which means search might include them.
+                - Name: GenericLFI_URIPATH
+                  # Inspects for the presence of Local File Inclusion (LFI) exploits in the URI path. Examples
+                  # include path traversal attempts using techniques like ../../.
+                  # Repository names might include LFI looking strings.
+                - Name: GenericLFI_BODY
+                  # Inspects for the presence of Local File Inclusion (LFI) exploits in the request body. Examples
+                  # include path traversal attempts using techniques like ../../.
+                  # Workflows may contain LFI looking strings.
+                - Name: RestrictedExtensions_URIPATH
+                  # Inspects requests whose URI path includes system file extensions that the clients shouldn't
+                  # read or run. Example patterns include extensions like .log and .ini.
+                  # Legitimate URLs may include restricted extensions.
+                - Name: RestrictedExtensions_QUERYARGUMENTS
+                  # Inspects requests whose query arguments are system file extensions that the clients shouldn't
+                  # read or run. Example patterns include extensions like .log and .ini.
+                  # To be determined
+                - Name: GenericRFI_QUERYARGUMENTS
+                  # Inspects the values of all query parameters and blocks requests attempting to exploit RFI
+                  # (Remote File Inclusion) in web applications. Examples include patterns like ://.
+                  # Likely can be turned on as query arguments should not contain protocol strings.
+                - Name: GenericRFI_BODY
+                  # Inspects the values of the request body and blocks requests attempting to exploit RFI
+                  # (Remote File Inclusion) in web applications. Examples include patterns like ://.
+                  # Workflows likely contain strings that appear like RFI.
+                - Name: GenericRFI_URIPATH
+                  # Inspects the values of the URI path and blocks requests attempting to exploit RFI
+                  # (Remote File Inclusion) in web applications. Examples include patterns like ://.
+                  # We have paths that can contain odd strings.
+                #- Name: CrossSiteScripting_COOKIE
+                  # Inspects the value of cookie headers and blocks common cross-site scripting (XSS) patterns
+                  # using the built-in XSS detection rule in AWS WAF. Example patterns include
+                  # scripts like <script>alert("hello")</script>.
+                  # We don't use cookies so safe to turn on.
+                - Name: CrossSiteScripting_QUERYARGUMENTS
+                  # Inspects the value of query arguments and blocks common cross-site scripting (XSS)
+                  # patterns using the built-in XSS detection rule in AWS WAF. Example patterns include
+                  # scripts like <script>alert("hello")</script>.
+                  # Likely safe to turn on, we want to avoid XSS attempts in query arguments.
+                - Name: CrossSiteScripting_BODY
+                  # Inspects the value of the request body and blocks common cross-site scripting (XSS)
+                  # patterns using the built-in XSS detection rule in AWS WAF. Example patterns include
+                  # scripts like <script>alert("hello")</script>.
+                  # Likely safe to turn on, however, it is possible a service could include legitimate files with scripts perhaps.
+                - Name: CrossSiteScripting_URIPATH
+                  # Inspects the value of the URI path and blocks common cross-site scripting (XSS)
+                  # patterns using the built-in XSS detection rule in AWS WAF. Example patterns include
+                  # scripts like <script>alert("hello")</script>.
+                  # Likely safe to have on, XSS attempts in the URI are possible but should be blocked.
+              VendorName: AWS
+              Name: AWSManagedRulesCommonRuleSet
+        - Name: IPRateBasedRule
+          Priority: 2
+          Action:
+            Block: {}
+          VisibilityConfig:
+            SampledRequestsEnabled: true
+            CloudWatchMetricsEnabled: true
+             # This string must match the Value for Name: Rule defined in the RateBasedWAFAlarm alarm defined below
+            MetricName: !Sub 'IPRateBasedRule-${AWS::StackName}'
+          Statement:
+            RateBasedStatement:
+              AggregateKeyType: IP
+              Limit: !Ref RateLimitPerIP
+
+  RateBasedWAFAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: Rate-based WAF Alarm
+      AlarmDescription: Send an alert when a request is blocked due to the WAF rate-based rule being triggered
+      MetricName: BlockedRequests
+      Dimensions:
+       - Name: WebACL
+         Value: acl-07f5f0ec5d5cea976
+       - Name: Region
+         Value: !Ref 'AWS::Region'
+       - Name: Rule
+         # This string must match MetricName (as opposed to the rule name) defined in the IPRateBased rule defined above
+         Value: !Sub 'IPRateBasedRule-${AWS::StackName}'
+      Namespace: AWS/WAFV2
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 0
+      Period: 60
+      EvaluationPeriods: 1
+      Statistic: Sum
+      TreatMissingData: notBreaching
+
+Outputs:
+  WebhookQueueName:
+    Description: The name of the webhook queue
+    Value: !GetAtt 'WebhookQueue.QueueName'
+    Export:
+      Name: !Sub '${AWS::StackName}-WebhookQueueName'
+
+  # Web ACL outputs
+  WebACLArn:
+    Description: The arn of the the Web ACL that was created
+    Value: !GetAtt 'WebACL.Arn'
+    Export:
+      Name: !Sub '${AWS::StackName}-WebACLArn'
+  DeliveryStreamArn:
+    Description: The arn of the Kinesis Delivery Stream (for configuring logging).
+    Value: !GetAtt 'WAFDeliveryStream.Arn'
+    Export:
+      Name: !Sub '${AWS::StackName}-DeliveryStreamArn'
+
+
+

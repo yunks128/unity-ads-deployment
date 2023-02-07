@@ -1,0 +1,29 @@
+# Commit: db4678a https://github.com/dockstore/dockstore-deploy/commits/db4678a
+# Template for creating ES log groups (only one created for now)
+# After deploying this stack but before creating ES, you need to add a resource policy for the Elasticsearch service
+# to have access. Lame that it is not supported by CloudFormation!
+#
+
+Description: >
+  Manages the Elasticsearch service log group(s)
+
+Parameters:
+  LogGroupName:
+    Description: The name of the log group, which equals the domain
+    Type: String
+    Default: /aws/aes/domains/dev-dockstore-elasticsearch/application-logs
+
+Resources:
+  EsApplicationLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Ref LogGroupName
+
+Outputs:
+  EsApplicationLogGroup:
+    Description: The ES application logs group
+    Value: !GetAtt 'EsApplicationLogGroup.Arn'
+    Export:
+      Name: !Sub '${AWS::StackName}-EsApplicationLogGroup'
+
+

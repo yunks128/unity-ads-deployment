@@ -1,0 +1,210 @@
+# Commit: db4678a https://github.com/dockstore/dockstore-deploy/commits/db4678a
+# A template to create AWS resources for running Dockstore
+#
+# PreInstall
+# ----------
+#
+# * An S3 bucket will be created when s3.yml is ran prior to running this template. This bucket has the same name as the domain, except periods
+#   are replaced with dashes. For example, if you are creating the stack for the domain ".dockstore.net", the S3 bucket is named "dev-dockstore-net".
+#
+#   You must manually create two folders in this S3 bucket:
+#     1. bootstrap
+#     2. grafana
+#
+#   The 'bootstrap' folder contains two items, which you must manually place into the folder:
+#     1. database.tar.gz, that has one file in it, database.sql. This file is used to populate the database.
+#     2. dockstore-github-private-key.tar.gz, with one file in it, dockstore-github-private-key.pem. This is the PEM file for GitHub apps.
+#
+#   The 'grafana' folder contains two items, which you must manually place into the folder:
+#     1. dockstore-dashboard.json.mustache -> This is a Grafana dashboard json file that will be imported to Grafana to create a dashboard.
+#     2. grafana_database_backup.db -> This is a Grafana database that is restored to the Grafana instance so previously created users still exist.
+#        ** This file is OPTIONAL if you choose NOT to restore Grafana users with a Grafana database. If you don't want to restore users, make sure
+#           that the RestoreGrafanaUsers parameter is set to 'false' when you are deploying this template.
+#
+# * Create an AWS keypair.
+# * Ensure correct values are filled out in SSM Parameter Store
+#
+# Install
+# -------
+#
+# 0. Run log-group.yml
+# 2. Run core-<env>.yml
+# 3. Run s3-<env>.yml
+# 4. Run dockstore-<env>.yml. You will need the stack names from steps 2 and 3.
+#
+# Unlike other resources created as part of the stack, the log group, whose name is the domain name,
+# is not deleted when the stack is deleted. Attempting to create the same log group a second time will cause that stack
+# creation to fail.
+#
+# PostInstall
+# -----------
+#
+# Add or modify the recordset for your domain to point to the load balancer created in this stack. Point
+# it to the output value from runnig the stack.
+#
+# TODO
+#
+# 1. Should fire some sort of notification when update is performed or fails (Slack?).
+
+---
+
+Description: >
+  Manages the Dockstore EC2 instances, as well as the lambda that fetches from SQS and invokes the web service.
+
+Parameters:
+  DockstoreLambdaBucket: 
+    Description: The s3 bucket with zip files of Dockstore lambda. Must be in same region as the CF stack. For us-east-1, dockstore.lambda; for us-west-2, dockstore.lambda.us-west.
+    Type: String
+    Default: 'uads-dev-dockstore-lambda-bucket'
+  DockstoreLambdaKey:
+    Description: The s3 key of the Dockstore lambda zip file
+    Type: String
+    Default: 'upsertGitHubTag.zip'
+  DockstoreLambdaMaxConcurrency: 
+    Description: ReservedConcurrentExecutions for the Dockstore lambda to throttle requests. 0 uses AWS account's remaining unreserved lambda concurrency.
+    Type: Number
+    Default: 12
+    MinValue: 0
+    MaxValue: 1000
+  LoadBalancerStack:
+    Description: The name of the check url exists stack.
+    Type: String
+    MinLength: 1
+  CoreStack:
+    Description: The name of the core stack.
+    Type: String
+    MinLength: 1
+  DockstoreToken:
+    Description: The Dockstore token used by the lambda to make API calls to Dockstore
+    Type: String 
+  SecretToken:
+    Description: The secret token used by GitHub lambda
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /DeploymentConfig/dev/SecretToken
+    NoEcho: true
+
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "Configure the Dockstore Software Versions"
+        Parameters:
+          - DockstoreLambdaBucket
+          - DockstoreLambdaKey
+
+Resources:
+
+  GitHubLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      PermissionsBoundary: !Sub "arn:aws:iam::${AWS::AccountId}:policy/mcp-tenantOperator-AMI-APIG"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          Effect: Allow
+          Principal:
+            Service:
+              - "lambda.amazonaws.com"
+          Action: sts:AssumeRole
+      Path: "/"
+      Policies:
+        - PolicyName: AWSLambdasBasicExecutionRole
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: "*"
+        - PolicyName: allowSqs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Effect: Allow
+              Action:
+              - sqs:ReceiveMessage
+              - sqs:DeleteMessage
+              - sqs:GetQueueAttributes
+              - sqs:ChangeMessageVisibility
+              Resource: !Join
+                - ''
+                - - 'arn:aws:sqs:'
+                  - !Ref 'AWS::Region'
+                  - ':'
+                  - !Ref 'AWS::AccountId'
+                  - ':'
+                  - Fn::ImportValue: !Sub '${CoreStack}-WebhookQueueName'
+            - Effect: Allow
+              Action: 
+              - sqs:SendMessage
+              Resource: !GetAtt 'GitHubLambdaDeadQueue.Arn'
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-lambda-github'
+        - Key: Environment
+          Value: ''
+
+  GitHubQueueLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: A lambda that invokes the Dockstore API with GitHub updates
+      FunctionName: !Sub 'upsertGithubPush-${AWS::StackName}'
+      Handler: index.handler
+      DeadLetterConfig:
+        TargetArn: !GetAtt 'GitHubLambdaDeadQueue.Arn'
+      Environment:
+        Variables:
+          DOCKSTORE_TOKEN: !Ref DockstoreToken
+          API_URL: !Join
+            - ''
+            - - 'http://'
+              - Fn::ImportValue: !Sub '${LoadBalancerStack}-LBDNSName'
+              - ':9998/api/'
+          SECRET_TOKEN: !Ref SecretToken
+      Code:
+        S3Bucket: !Ref DockstoreLambdaBucket
+        S3Key: !Ref DockstoreLambdaKey
+      ReservedConcurrentExecutions: !Ref DockstoreLambdaMaxConcurrency
+      Role: !GetAtt 'GitHubLambdaRole.Arn'
+      Runtime: nodejs14.x
+      Timeout: 900
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-lambda-github-queue'
+        - Key: Environment
+          Value: ''
+
+  GitHubLambdaDeadQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub 'upsertGithubPush-${AWS::StackName}-dead'
+      DelaySeconds: 2
+      MessageRetentionPeriod: 1209600
+      ReceiveMessageWaitTimeSeconds: 20
+      VisibilityTimeout: 3600
+      KmsMasterKeyId: "alias/aws/sqs"
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-github-lambda-dead-queue'
+        - Key: Environment
+          Value: ''
+
+  LambdaFunctionEventSourceMapping:
+    Type: AWS::Lambda::EventSourceMapping
+    Properties:
+      BatchSize: 1
+      Enabled: true
+      EventSourceArn: !Join
+        - ''
+        - - 'arn:aws:sqs:'
+          - !Ref 'AWS::Region'
+          - ':'
+          - !Ref 'AWS::AccountId'
+          - ':'
+          - Fn::ImportValue: !Sub '${CoreStack}-WebhookQueueName'
+      FunctionName: !GetAtt GitHubQueueLambda.Arn
+
+ 
+

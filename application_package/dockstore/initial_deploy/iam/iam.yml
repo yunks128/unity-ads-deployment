@@ -1,0 +1,134 @@
+# Commit: db4678a https://github.com/dockstore/dockstore-deploy/commits/db4678a
+Description: >
+  IAM policies and groups
+
+Parameters:
+  ResourcePrefix:
+    Description: The resource prefix (dev or test)
+    Type: String
+    MaxLength: 128
+    Default: dev
+
+Resources: 
+  EnvironmentTagSsmAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "Full SSM and EC2 access to users whose Environment tag contains EC2 Environment tag"
+      ManagedPolicyName: "TagBasedSsmAccess"
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - "ssm:StartSession"
+              - "ec2:CreateTags"
+              - "ec2:RunInstances"
+              - "ec2:StartInstances"
+              - "ec2:StopInstances"
+              - "ec2:Describe*"
+            Resource: !Sub "arn:aws:ec2:*:${AWS::AccountId}:instance/*"
+            Condition:
+              StringLike:
+                "aws:PrincipalTag/Environment": "*${aws:ResourceTag/Environment}*"
+          - Effect: Allow
+            Action:
+              - "ssm:TerminateSession"
+              - "ssm:ResumeSession"
+            Resource: !Join ['', [!Sub "arn:aws:ssm:*:${AWS::AccountId}:session/", "${aws:username}-*"]]
+          - Effect: Allow
+            Action:
+              - "ssm:*"
+            Resource: !Sub "arn:aws:ssm:*:${AWS::AccountId}:parameter/*"
+            Condition:
+              StringLike:
+                "aws:PrincipalTag/Environment": "*${aws:ResourceTag/Environment}*"
+
+  DockstoreCloudFormationRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+             Effect: Allow 
+             Action:
+               - "sts:AssumeRole"  
+             Principal:
+                 Service:
+                  -  cloudformation.amazonaws.com
+        PermissionsBoundary: !Sub "arn:aws:iam::${AWS::AccountId}:policy/mcp-tenantOperator-AMI-APIG"      
+        ManagedPolicyArns:
+              - "arn:aws:iam::aws:policy/IAMFullAccess"
+              - "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+              - "arn:aws:iam::aws:policy/AWSCloudFormationFullAccess"
+ 
+
+  ModifyInstanceMetaDataOptionsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub 'uads-${ResourcePrefix}-meta-role'
+      AssumeRolePolicyDocument:
+       Version: "2012-10-17"
+       Statement:
+         - Effect: Allow
+           Principal:
+              Service:
+                - ssm.amazonaws.com
+           Action:
+              - 'sts:AssumeRole'
+      PermissionsBoundary: !Sub "arn:aws:iam::${AWS::AccountId}:policy/mcp-tenantOperator-AMI-APIG"
+      Policies:
+        - PolicyName: ModifyInstanceMetaDataOptions
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'ec2:ModifyInstanceMetadataOptions'
+                  - 'ec2:DescribeInstances'
+                Resource: '*'
+
+  DockstoreDeployerPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: SNS Publish and s3 reading permissions needed by the deployer
+      ManagedPolicyName: DockstoreDeployerPolicy
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - "sns:Publish"
+            Resource: '*'
+          - Effect: Allow
+            Action:
+              - "s3:ListBucket"
+              - "s3:GetObject"
+            # The deployer used to have the now deprecated AWS arn:aws:iam::aws:policy/AWSLambdaFullAccess policy. That policy
+            # gave "s3:*" permissions. That's how the deployer was able to deploy lambdas before.
+            # These buckets are in different accounts, but it's easier and still safe to just list all lambda buckets
+            Resource:
+              - !Sub 'arn:aws:s3:::uads-${ResourcePrefix}-dockstore.lambda'
+              - !Sub 'arn:aws:s3:::uads-${ResourcePrefix}-dockstore.lambda/*'
+              - !Sub 'arn:aws:s3:::uads-${ResourcePrefix}-dockstore-deploy/*'
+              - !Sub 'arn:aws:s3:::uads-${ResourcePrefix}-dockstore-deploy'
+          - Effect: Allow
+            Action:
+                - 'sqs:CreateQueue'
+                - 'sqs:DeleteQueue'
+                - 'sqs:GetQueueAttributes'
+                - 'sqs:SetQueueAttributes'
+                - 'sqs:TagQueue'
+                - 'sqs:UntagQueue'
+            Resource:
+              - !Sub 'arn:aws:sqs:*:${AWS::AccountId}:upsertGithubPush*'
+              - !Sub 'arn:aws:sqs:*:${AWS::AccountId}:SecurityHubFindingsSuppression*'
+          - Effect: Allow
+            Action:
+              - 's3:PutObject'
+              - 's3:GetObject'
+              - 's3:ListObject'
+            Resource:
+                - 'arn:aws:s3:::cdktoolkit-stagingbucket-*/*'
+                - 'arn:aws:s3:::cdktoolkit-stagingbucket-*'
+
+
