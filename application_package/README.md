@@ -89,7 +89,6 @@ The final step is the GitHub Lambda deployment. The steps are as follows:
 1. Change to the `application_package/dockstore/app_deploy/lambda/` directory (relative to `application_package/dockstore//app_deploy/app/` it is `../lambda/``)
 2. Run `terraform init`
 3. Run `terraform apply`
-4. Update the loadbalancer URL in the env.json file of the lambda via the AWS Web UI.
 
 The EC2 instance that the application is run on can be connected to via SSM either in the AWS Web UI or wsing the `aws ssm` CLI command. You can connect in order to debug any issues with the application, and it is the only location from which you can connect to the RDS/Database instace.
 
