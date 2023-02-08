@@ -159,9 +159,10 @@ Note: The initial standup of the web app, etc. takes 5-10 minutes after CloudFor
 
 ## Shutdown Deployment
 
-To shutdown U-ADS deployment, run `terraform destroy` in reverse order:
+To shutdown U-ADS deployment, run `terraform destroy` in reverse order[^1]:
 
-1. Lambda: 
+1. Lambda:
+Set temporary AWS access keys using MCP Tenant Systems Administrator role in Kion
 
 ```
 cd application_package/dockstore/app_deploy/lambda
@@ -180,4 +181,4 @@ cd application_package/dockstore/initial_deploy
 terraform destroy
 ```
 
-
+[^1]: Remember to set temporary AWS access keys using MCP Tenant Systems Administrator role in Kion prior to each `terraform` command.
