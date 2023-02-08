@@ -127,4 +127,57 @@ To deploy the GitHub Lambda please follow the steps:
 
 The EC2 instance that the application is run on can be connected to via SSM either in the AWS Web UI or using the `aws ssm` CLI command. You can connect in order to debug any issues with the application, and it is the only location from which you can connect to the RDS/Database instance.
 
+## Deployment Logs
+
+To examine deployment logs for the applicatoin, please find EC2 instance the application is running on. The EC2 instance name is in the App Stack's Resources or can be found through the 'dockstore' search filter in the `AWS Console: EC2` (which is `awsAppDockstoreStack-instance`).  Connect to the instance through AWS's Session Manager.
+
+Log details for the commands invoked to initialize the server during the CloudFormation run:
+
+`sudo tail -n 100 /var/log/cloud-init-output.log`
+
+To look at the various pieces of the application on the server:
+
+```
+sudo su ubuntu
+cd ~/compose_setup/
+export LOG_GROUP_NAME=awsagent-update.log
+```
+
+* Logs for the docker container that contains the actual web application (might have some errors that are logged during initialization, mostly related to log4j, but they are not fatal):
+
+`docker logs --tail 100 compose_setup_webservice_1`
+
+* Logs for the container that hosts the actual web server which handles web traffic
+
+`docker logs --tail 100 compose_setup_nginx_dockstore_1`
+
+* Logs for the container that contains software to check on the DB migration/setup. It will run once and then exit:
+
+`docker logs --tail 100 compose_setup_migration_1`
+
+Note: The initial standup of the web app, etc. takes 5-10 minutes after CloudFormation reports success, so if the URL isn't immediately working, that is OK.
+
+## Shutdown Deployment
+
+To shutdown U-ADS deployment, run `terraform destroy` in reverse order:
+
+1. Lambda: 
+
+```
+cd application_package/dockstore/app_deploy/lambda
+terraform destroy
+```
+
+2. Application:
+```
+cd application_package/dockstore/app_deploy/app
+terraform destroy
+```
+
+3. Initial deployment:
+```
+cd application_package/dockstore/initial_deploy
+terraform destroy
+```
+
 
