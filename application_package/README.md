@@ -40,16 +40,24 @@ Deploys these Unity ADS services:
 For each deployment instance (ie. development, test, production) define the following environment variables to customize the install to the environment. For example for the test deployment you would defined the following variables:
 
 ```
-export TF_VAR_api_id=123456
-export TF_VAR_api_parent_id=65432
+export TF_VAR_api_id=value1
+export TF_VAR_api_parent_id=value2
 export TF_VAR_resource_refix=dev
 export TF_VAR_availability_zone=us-west-2b
 
-#Do not worry about populating these correctly for infrastructure/initial deploy
-export TF_VAR_dockstore_token="123456543"
+# Do not worry about populating these correctly for infrastructure/initial deploy
+export TF_VAR_dockstore_token=""
 ```
 
-The `resource_prefix` should match the environment you are deploying in (dev, test, or prod). The `api_id` value should be the ID assigned to the Unity API Gateway. The `api_parent_id` value should be the ID assigned to the desired parent resource for the new dockstore method in Unity API Gateway - currently we are using /ads/. The `availability_zone` should be the availability zone requested for the DB and other resources - should match available subnets availability zones. The `dockstore_token cannot be set until after the application has been deployed in the second terraform deployment (out of 3). It is the token associated with the account that will be used for the GitHub Lambda authentication`
+The `resource_prefix` should match the environment you are deploying in (one of `dev`, `test`, or `prod`).
+
+The `api_id` value should be the ID assigned to the `Unity API Gateway`. 
+
+The `api_parent_id` value should be the ID assigned to the desired parent resource for the new dockstore method in `Unity API Gateway` - currently we are using `/ads`. Both ID values are acccessible through `AWS Console: API Gateway -> Unity API Gateway` where upper toolbar lists the ID values: `APIs > Unity API Gateway (value1) > Resources > /ads (value2)`
+
+The `availability_zone` should be the availability zone requested for the DB and other resources - should match available subnets availability zones.
+
+The `dockstore_token` is the Dockstore administrator account token accessible from the Dockstore user account once the Dockstore application is deployed and user is registered with the application. Please note that `dockstore_token` cannot be set until after the Dockstore application has been deployed in the second (out of three) terraform deployment. It is the token associated with the `admin` account that will be used for the GitHub Lambda authentication.
 
 
 ### Initial Deployment 
