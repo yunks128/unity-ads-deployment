@@ -1,0 +1,130 @@
+---
+
+Description: >
+  Manages the Dockstore EC2 instances, as well as the lambda that fetches from SQS and invokes the web service.
+
+Parameters:
+  ResourcePrefix:
+    Description: Env prefix (dev or test)
+    Type: String
+    Default: 'dev'
+  VpcId: 
+    Description: ID for the VPC the LB is to be within
+    Type: String
+  SubnetId1:
+    Description: ID for the first subnet the LB is to be accessible on
+    Type: String
+  SubnetId2:
+    Description: ID for the second subnet the LB is to be accessible on
+    Type: String
+  LoadBalancerIdleTimeout:
+    Description: The idle timeout value, in seconds
+    Type: Number
+    Default: 600
+    MinValue: 1
+    MaxValue: 4000
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "Load Balancer Settings"
+        Parameters:
+          - LoadBalancerIdleTimeout
+
+Resources:
+
+  # A security group for the load balancer which allows incoming traffic on ports 80, 443,
+  # and outgoing traffic on port 80, where incoming is from the internets
+  # and outgoing is to our EC2 instances.
+  LbSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allows inbound on ports 80, 443, from all IP address. Allows all outbound to EC2 on port 80.
+      GroupName: !Sub 'lb-security-group-https-${AWS::StackName}'
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 9998
+          ToPort: 9998
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 9999
+          ToPort: 9999
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 9998
+          ToPort: 9998
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 9999
+          ToPort: 9999
+          CidrIp: 0.0.0.0/0
+      VpcId: !Ref VpcId
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-sg-lb-80-443'
+        - Key: Environment
+          Value: !Ref ResourcePrefix
+
+  # An application load balancer
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      IpAddressType: ipv4
+      LoadBalancerAttributes:
+        - Key: "idle_timeout.timeout_seconds"
+          Value: !Ref LoadBalancerIdleTimeout
+        - Key: "access_logs.s3.enabled"
+          Value: 'false'
+        - Key: "deletion_protection.enabled"
+          Value: 'false'
+      Name: !Sub '${AWS::StackName}-lb'
+      Scheme: internet-facing
+      SecurityGroups:
+        - !Ref LbSecurityGroup
+      Subnets:
+         - !Ref SubnetId1 
+         - !Ref SubnetId2 
+      Type: application
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-lb'
+        - Key: Environment
+          Value: !Ref ResourcePrefix
+
+
+Outputs:
+  LoadBalancerDNSName:
+    Description: The DNSName of the load balancer; use it in Route53
+    Value: !GetAtt LoadBalancer.DNSName
+    Export:
+        Name: !Sub '${AWS::StackName}-LBDNSName'
+  LBSecurityGroup:
+    Description: The Load Balancer's security group
+    Value: !Ref LbSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-LBSecurityGroup'
+  LoadBalancer:
+    Description: The load balancer
+    Value: !Ref LoadBalancer
+    Export:
+      Name: !Sub '${AWS::StackName}-LoadBalancer'
+  LoadBalancerFullName:
+    Description: The full name of the load balancer, used by Grafana
+    Value: !GetAtt LoadBalancer.LoadBalancerFullName
+    Export:
+      Name: !Sub '${AWS::StackName}-LoadBalancerFullName'
+

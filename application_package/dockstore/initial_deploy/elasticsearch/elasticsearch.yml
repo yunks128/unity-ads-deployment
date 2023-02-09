@@ -1,0 +1,116 @@
+# Commit: db4678a https://github.com/dockstore/dockstore-deploy/commits/db4678a
+Description: >
+  Creates an Elastic Search Service
+
+Parameters:
+  EsLogGroupStack:
+    Description: The name of the log group stack
+    Type: String
+    Default: awsEsLogGroupsDockstoreStack
+  ElasticsearchVersion:
+    Description: The Elastic Search version
+    Type: String
+    Default: '7.10'
+  DomainName:
+    Description: The Elastic Search domain name
+    Type: String
+    Default: dev-dockstore-elasticsearch
+  ResourcePrefix:
+    Description: Env prefix (dev or test)
+    Type: String
+    Default: 'dev'
+  VpcId:
+    Description: VPC ID for desired VPC 
+    Type: String
+  SubnetId:
+    Description: Subnet ID for desired VPC
+    Type: String
+
+Resources:
+
+  ElasticsearchSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security Group for ElasticSearch
+      SecurityGroupIngress:
+        - Description: Allow inbound traffic from the load balancer to the EC2 instance on port 80
+          CidrIp: 0.0.0.0/0
+          ToPort: 65535
+          FromPort: 1
+          IpProtocol: tcp
+      SecurityGroupEgress:
+        - Description: Allow outbound http traffic (for aptitude) - see SEAB-3387
+          CidrIp: 0.0.0.0/0
+          ToPort: 65535
+          FromPort: 1
+          IpProtocol: tcp
+      VpcId: !Ref VpcId 
+      Tags:
+        - Key: Environment
+          Value: !Ref ResourcePrefix 
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-sg-elasticsearch'
+
+  ElasticsearchService:
+    Type: AWS::Elasticsearch::Domain
+    Properties:
+      AccessPolicies:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: '*'
+              Service:
+               - 'es.amazonaws.com'
+            Action:
+              - 'es:ESHttp*'
+              - 'logs:PutLogEvents'
+              - 'logs:CreateLogStream'
+            Resource: '*'
+      DomainName: !Ref "DomainName"
+      EBSOptions:
+        EBSEnabled: true
+        VolumeSize: 20
+        VolumeType: gp2
+      ElasticsearchVersion: !Ref ElasticsearchVersion
+      ElasticsearchClusterConfig:
+        InstanceType: t3.small.elasticsearch
+        InstanceCount: 2
+      VPCOptions:
+        SecurityGroupIds:
+          - !Ref ElasticsearchSecurityGroup
+        SubnetIds:
+          - !Ref SubnetId 
+      DomainEndpointOptions:
+        EnforceHTTPS: false
+      NodeToNodeEncryptionOptions:
+        Enabled: true
+      EncryptionAtRestOptions:
+        Enabled: false
+      LogPublishingOptions:
+        ES_APPLICATION_LOGS:
+          CloudWatchLogsLogGroupArn:
+            Fn::ImportValue: !Sub '${EsLogGroupStack}-EsApplicationLogGroup'
+          Enabled: true
+      Tags:
+        - Key: Environment
+          Value: !Ref ResourcePrefix
+
+  OSLogGroupPolicy:
+    Type: AWS::Logs::ResourcePolicy
+    Properties:
+      PolicyName: AllowES
+      PolicyDocument: '{"Version": "2012-10-17","Statement":[{"Effect":"Allow","Principal": {"Service": ["es.amazonaws.com"]},"Action":["logs:PutLogEvents","logs:CreateLogStream"],"Resource":"*"}]}' 
+ 
+Outputs:
+  ESDomainEndpoint:
+    Description: The Elasticsearch domain
+    Value: !GetAtt 'ElasticsearchService.DomainEndpoint'
+    Export:
+      Name: !Sub '${AWS::StackName}-ESDomainEndpoint'
+  ESSecurityGroup:
+    Description: The SecurityGroup associated with ElasticSearch
+    Value: !Ref ElasticsearchSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-ESSecurityGroup'
+
