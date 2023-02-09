@@ -157,7 +157,7 @@ Resources:
       Environment:
         Variables:
           DOCKSTORE_TOKEN: !Ref DockstoreToken
-          API_URL: !Join
+          DS_API_URL: !Join
             - ''
             - - 'http://'
               - Fn::ImportValue: !Sub '${LoadBalancerStack}-LBDNSName'
