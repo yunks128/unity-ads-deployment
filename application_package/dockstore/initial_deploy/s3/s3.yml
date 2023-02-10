@@ -51,6 +51,7 @@ Resources:
   StartupBucketManagedPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
+      Bucket: !Ref S3Bucket
       PolicyDocument:
         Version: '2012-10-17'
         Id: DockstoreBucketPolicy
@@ -60,6 +61,25 @@ Resources:
           Effect: Allow
           Resource: !Join ['', [!GetAtt S3Bucket.Arn, '/*']]
 
+
+  ElbLogsBucketManagedPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Bucket: !Ref ElbLogsBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Id: DockstoreBucketPolicy
+        Statement:
+          Action:
+          - s3:GetObject
+          Effect: Allow
+          Action:
+          - s3:PutObject
+          Resource: !Join ['', [!GetAtt ElbLogsBucket.Arn, '/*']]
+          Principal: 
+            AWS: !Ref ELBAccountId 
+          
+
   S3Bucket:
     Type: AWS::S3::Bucket
     DeletionPolicy: Delete
@@ -67,10 +87,10 @@ Resources:
       BucketName: !Ref BucketName
       AccessControl: Private
       PublicAccessBlockConfiguration:
-        BlockPublicAcls: true
-        BlockPublicPolicy: true
-        IgnorePublicAcls: true
-        RestrictPublicBuckets: true
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
@@ -88,10 +108,10 @@ Resources:
       BucketName: !Ref ELBLogsBucketName
       AccessControl: Private
       PublicAccessBlockConfiguration:
-        BlockPublicAcls: true
-        BlockPublicPolicy: true
-        IgnorePublicAcls: true
-        RestrictPublicBuckets: true
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
@@ -113,9 +133,13 @@ Outputs:
     Value: !Ref StartupBucketManagedPolicy
     Export:
       Name: !Sub '${AWS::StackName}-StartupBucketManagedPolicy'
-  ElbLogsBucket:
+  ElbLogsBucketName:
     Description: The name of the S3 bucket that was created
     Value: !Ref 'ElbLogsBucket'
     Export:
       Name: !Sub '${AWS::StackName}-ElbLogsBucket'
-
+  ElbLogsBucketManagedPolicy:
+    Description: Role to put LB logs
+    Value: !Ref ElbLogsBucketManagedPolicy
+    Export:
+      Name: !Sub '${AWS::StackName}-ElbLogsBucketManagedPolicy'
