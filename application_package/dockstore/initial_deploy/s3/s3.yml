@@ -40,13 +40,13 @@ Parameters:
 # Account ids from https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/enable-access-logs.html
 Mappings:
   Regions:
-    #us-east-1:
-    #  ELBAccountId: 'arn:aws:iam::127311923021:root'
+    us-east-1:
+      ELBAccountId: 'arn:aws:iam::127311923021:root'
     us-west-2:
       ELBAccountId: 'arn:aws:iam::797873946194:root'
-    #us-east-2:
-    #  ELBAccountId: 'arn:aws:iam::033677994240:root'
-
+    us-east-2:
+      ELBAccountId: 'arn:aws:iam::033677994240:root'
+ 
 Resources:
   StartupBucketManagedPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -77,7 +77,7 @@ Resources:
           - s3:PutObject
           Resource: !Join ['', [!GetAtt ElbLogsBucket.Arn, '/*']]
           Principal: 
-            AWS: !Ref ELBAccountId 
+            AWS: !FindInMap [Regions, !Ref "AWS::Region", ELBAccountId]
           
 
   S3Bucket:

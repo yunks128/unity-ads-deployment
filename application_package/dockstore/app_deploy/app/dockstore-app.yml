@@ -136,7 +136,7 @@ Parameters:
       - us-west-2b
       - us-west-2c
       - us-west-2d
-    Default: us-west-2a
+    Default: us-west-2b
   InstanceType:
     Description: The EC2 instance type for Dockstore
     Type: String

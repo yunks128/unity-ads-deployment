@@ -29,7 +29,7 @@ Parameters:
       - us-west-2d
       #- us-east-2a
       #- us-east-2b
-    Default: us-west-2a
+    Default: us-west-2b
   DBAllocatedStorage:
     Description: 'The allocated storage size, specified in GB (ignored when DBSnapshotIdentifier is set, value used from snapshot).'
     Type: Number
