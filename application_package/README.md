@@ -79,6 +79,16 @@ The initial deployment consists of many AWS resources required prior to deployin
 5. Run `terraform apply`
 
 ### 2. Application Deployment
+The Dockstore application is installed within an EC2 instance and this step handles standing it up. 
+
+#### Deployment
+The steps are as follows:
+
+1. Change to the `application_package/dockstore/app_deploy/app` directory (relative to `application_package/dockstore/initial_deploy` it is `../app_deploy/app`)
+2. Set temporary AWS access keys using `MCP Tenant Systems Administrator` role in Kion
+3. Run `terraform init`
+4. Run `terraform apply`
+
 There is a GitHub app that talks to the GitHub Lambda, which will be deployed later in the instruction set. It needs proper URLs for the WebHook, Callback, and Homepage settings. The WebHook URL should not change frequently, as it is dependent on the API Gateway in the AWS environment and pre-defined resources within it, and the API Gateway is pretty static. 
 
 The Callback and Dockstore Homepage settings should follow the convention `<LOAD_BALANCER_DNS_NAME>:9998` where `<LOAD_BALANCER_DNS_NAME>` is the output LB DNS name (`LoadBalancerDNSName`) from the Load Balancer Stack (accessible through `AWS Console: CloudFormation -> Stacks -> awsLBDockstoreStack -> Outputs`) created in the initial deployment. We use port `9998` due to security constraints that limit the use of low numbered ports - this is in the CloudFormation config.
@@ -87,14 +97,6 @@ Each deployment environment requires a separate app, and currently the apps are:
 * for the prod: TODO: add docs on how to create it
 * for the dev: https://github.com/apps/jpl-uads-dockstore-dev-1 
 * for the test: https://github.com/apps/jpl-uads-dockstore
-
-#### Deployment
-The Dockstore application is installed within an EC2 instance and this step handles standing it up. The steps are as follows:
-
-1. Change to the `application_package/dockstore/app_deploy/app` directory (relative to `application_package/dockstore/initial_deploy` it is `../app_deploy/app`)
-2. Set temporary AWS access keys using `MCP Tenant Systems Administrator` role in Kion
-3. Run `terraform init`
-4. Run `terraform apply`
 
 ### 3. Lambda Deployment
 
