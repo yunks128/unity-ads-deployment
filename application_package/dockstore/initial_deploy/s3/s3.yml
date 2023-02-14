@@ -51,7 +51,6 @@ Resources:
   StartupBucketManagedPolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
-      Bucket: !Ref S3Bucket
       PolicyDocument:
         Version: '2012-10-17'
         Id: DockstoreBucketPolicy
@@ -62,23 +61,6 @@ Resources:
           Resource: !Join ['', [!GetAtt S3Bucket.Arn, '/*']]
 
 
-  ElbLogsBucketManagedPolicy:
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      Bucket: !Ref ElbLogsBucket
-      PolicyDocument:
-        Version: '2012-10-17'
-        Id: DockstoreBucketPolicy
-        Statement:
-          Action:
-          - s3:GetObject
-          Effect: Allow
-          Action:
-          - s3:PutObject
-          Resource: !Join ['', [!GetAtt ElbLogsBucket.Arn, '/*']]
-          Principal: 
-            AWS: !FindInMap [Regions, !Ref "AWS::Region", ELBAccountId]
-          
 
   S3Bucket:
     Type: AWS::S3::Bucket
@@ -106,7 +88,7 @@ Resources:
     DeletionPolicy: Delete
     Properties:
       BucketName: !Ref ELBLogsBucketName
-      AccessControl: Private
+      AccessControl: PublicReadWrite
       PublicAccessBlockConfiguration:
         BlockPublicAcls: false
         BlockPublicPolicy: false
@@ -138,8 +120,4 @@ Outputs:
     Value: !Ref 'ElbLogsBucket'
     Export:
       Name: !Sub '${AWS::StackName}-ElbLogsBucket'
-  ElbLogsBucketManagedPolicy:
-    Description: Role to put LB logs
-    Value: !Ref ElbLogsBucketManagedPolicy
-    Export:
-      Name: !Sub '${AWS::StackName}-ElbLogsBucketManagedPolicy'
+
