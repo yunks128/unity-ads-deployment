@@ -120,7 +120,7 @@ If it is very first time setting up the environment, please register new GitHub 
 
 Each deployment environment requires a separate GitHub App, and currently the apps are:
 * for the prod: TBD
-* for the dev: https://github.com/apps/jpl-uads-dockstore-dev-1 (replace with new app once tested: https://github.com/apps/unity-ads-dockstore-dev)
+* for the dev: https://github.com/apps/unity-ads-dockstore-dev
 * for the test: https://github.com/apps/jpl-uads-dockstore
 
 Set AWS Parameters through `AWS Console: AWS Systems Manager -> Parameter Store` which store corresponding value of the GitHub App:
@@ -128,6 +128,8 @@ Set AWS Parameters through `AWS Console: AWS Systems Manager -> Parameter Store`
 * /DeploymentConfig/dev/GitHubAppName
 * /DeploymentConfig/dev/GitHubClientId
 * /DeploymentConfig/dev/GitHubClientSecret: generate new client secret within GitHub App and use the value for the parameter
+
+Once GitHub App is created, install it in your GitHub account, add GitHub repositories to grand App access to.
 
 ### 3. Lambda Deployment
 
