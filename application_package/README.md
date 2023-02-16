@@ -191,7 +191,9 @@ export LOG_GROUP_NAME=awsagent-update.log
 
 `docker logs --tail 100 compose_setup_migration_1`
 
-Note: The initial standup of the web app, etc. takes 5-10 minutes after CloudFormation reports success, so if the URL isn't immediately working, that is OK.
+**Notes**
+1. The initial standup of the web app, etc. takes 5-10 minutes after CloudFormation reports success, so if the URL isn't immediately working, that is OK.
+2. There will be WARNING messages in the `compose_setup_webservice_1` log, but as long as `org.eclipse.jetty.server.Server: Started` message is displayed after these warnings, the Dockstore instance is fully up and ready to accept requests.
 
 ## Shutdown Deployment
 
