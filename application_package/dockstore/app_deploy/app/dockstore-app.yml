@@ -1004,7 +1004,7 @@ Resources:
           ufw disable
           /usr/local/bin/cfn-init -v --stack ${AWS::StackName} --resource DockstoreInstance --configsets setup_dockstore,setup_collectd,cw_agent_default,harden_server --region ${AWS::Region}
           /usr/local/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource DockstoreInstance --region ${AWS::Region}
-      DependsOn: DockstoreEIPAssociation
+    DependsOn: DockstoreEIPAssociation
     CreationPolicy:
       ResourceSignal:
         Timeout: PT30M
