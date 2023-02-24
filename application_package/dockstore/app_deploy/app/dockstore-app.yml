@@ -62,6 +62,9 @@ Parameters:
     Description: Env prefix (dev or test)
     Type: String
     Default: 'dev'
+  ENIPrivateIP:
+    Description: Private IP for ENI
+    Type: String
   #AppUrl:
   #  Description: Application URL
   #  Type: String
@@ -410,7 +413,9 @@ Resources:
     Type: AWS::EC2::NetworkInterface
     Properties:
       SubnetId: !Ref SubnetId
-      PrivateIpAddress: !GetAtt DockstoreInstance.PrivateIp
+      GroupSet:
+      - !Ref DockstoreServerSecurityGroup
+      PrivateIpAddress: !Ref ENIPrivateIP
 
   DockstoreEIPAssociation:
     Type: AWS::EC2::EIPAssociation
@@ -922,9 +927,13 @@ Resources:
             # We could also set the account settings to encrypt any EBS Volume
             # by default https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSEncryption.html#encryption-by-default
             Encrypted: true
-      SecurityGroupIds:
-        - !Ref DockstoreServerSecurityGroup
-      SubnetId: !Ref SubnetId 
+      # These are in conflict with newly introduced ENI resource DockstoreENI, just move the group to ENI definition
+      # SecurityGroupIds:
+      #   - !Ref DockstoreServerSecurityGroup
+      # SubnetId: !Ref SubnetId
+      NetworkInterfaces:
+        - NetworkInterfaceId: !Ref DockstoreENI
+          DeviceIndex: '0'
       Monitoring: true
       Tags:
         - Key: Name
