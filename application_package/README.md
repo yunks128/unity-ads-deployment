@@ -47,7 +47,7 @@ export TF_VAR_availability_zone=us-west-2b
 
 # Do not worry about populating these tokens correctly for infrastructure/initial deploy (step #1 below), they will need to be set for the deployment of the Dockstore API in step #2:
 export TF_VAR_dockstore_token=""
-export TF_eni_private_ip=""
+export TF_VAR_eni_private_ip=""
 ```
 
 Where:
@@ -64,7 +64,7 @@ Note: Both ID values are accessible through `AWS Console: API Gateway -> Unity A
 
 `dockstore_token` - the Dockstore administrator account token that will be used for the GitHub Lambda authentication. The token is accessible from the Dockstore user account once the Dockstore application is deployed and administrator user is registered with the application. Please note that `dockstore_token` cannot be set until after the Dockstore application has been deployed in the `#2. Application Deployment` step (please see below).
 
-`eni_private_ip` - Pre-defined IP address to associate with ENI (Elastic Network Interface). This private IP address within subnet (corresponding to the AZ for the deployment) is associated with EIP of the EC2 instance where the Dockstore API is running.
+`eni_private_ip` - Pre-defined IP address to associate with ENI (Elastic Network Interface). This private IP address within subnet (corresponding to the AZ for the deployment) is associated with EIP of the EC2 instance where the Dockstore API is running. This address needs to be manually picked from any available IP addresses within the subnet.
 
 ## Deployment
 Terraform based deployment of the U-ADS infrastructure into MCP-AWS consists of three steps:
