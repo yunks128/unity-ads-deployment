@@ -84,6 +84,13 @@ The initial deployment consists of many AWS resources required prior to deployin
 ### 2. Application Deployment
 The Dockstore application is installed within an EC2 instance and this step handles standing it up. 
 
+A private IP address needs to be selected for the ENI association to the EIP of the EC2 instance we are about to create. Please follow these steps in to identify available private IP addresses within subnet that corresponds to the Availability Zone (AZ) for the deployment (as specified by `TF_VAR_availability_zone` environment variable):
+1. Access Subnets through `AWS Console: EC2 -> Load balancers`, select Load Balancer for the Dockstore, select `Network mapping` tab and get an ID of the subnet for the AZ of the deployment `subnet-xxxxx`
+2. Set temporary AWS access keys using `MCP Tenant Systems Administrator` role in Kion
+3. Run command, which will display all private IPs in use:
+   ```aws ec2 describe-network-interfaces --filters Name=subnet-id,Values=subnet-xxxxx | grep 'PrivateIpAddress":' | grep -v ','| sort```
+4. Select any not used private IP address for the subnet
+
 #### Deployment
 The steps are as follows:
 
