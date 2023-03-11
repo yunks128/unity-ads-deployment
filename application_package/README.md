@@ -90,6 +90,7 @@ A private IP address needs to be selected for the ENI association to the EIP of 
 3. Run command, which will display all private IPs in use:
    ```aws ec2 describe-network-interfaces --filters Name=subnet-id,Values=subnet-xxxxx | grep 'PrivateIpAddress":' | grep -v ','| sort```
 4. Select any not used private IP address for the subnet
+5. Set `TF_VAR_eni_private_ip` to the selected IP address
 
 #### Deployment
 The steps are as follows:
