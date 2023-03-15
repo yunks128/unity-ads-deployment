@@ -64,7 +64,7 @@ Note: Both ID values are accessible through `AWS Console: API Gateway -> Unity A
 
 `dockstore_token` - the Dockstore administrator account token that will be used for the GitHub Lambda authentication. The token is accessible from the Dockstore user account once the Dockstore application is deployed and administrator user is registered with the application. Please note that `dockstore_token` cannot be set until after the Dockstore application has been deployed in the `#2. Application Deployment` step (please see below).
 
-`eni_private_ip` - Pre-defined IP address to associate with ENI (Elastic Network Interface). This private IP address within subnet (corresponding to the AZ for the deployment) is associated with EIP of the EC2 instance where the Dockstore API is running. This address needs to be manually picked from any available IP addresses within the subnet.
+`eni_private_ip` - Pre-defined IP address to associate with ENI (Elastic Network Interface). This private IP address within private subnet (corresponding to the AZ for the deployment) is associated with EIP of the EC2 instance where the Dockstore API is running. This address needs to be manually picked from any available IP addresses within the private subnet that corresponds to the AZ for the deployment.
 
 ## Deployment
 Terraform based deployment of the U-ADS infrastructure into MCP-AWS consists of three steps:
@@ -84,8 +84,8 @@ The initial deployment consists of many AWS resources required prior to deployin
 ### 2. Application Deployment
 The Dockstore application is installed within an EC2 instance and this step handles standing it up. 
 
-A private IP address needs to be selected for the ENI association to the EIP of the EC2 instance we are about to create. Please follow these steps in to identify available private IP addresses within subnet that corresponds to the Availability Zone (AZ) for the deployment (as specified by `TF_VAR_availability_zone` environment variable):
-1. Access Subnets through `AWS Console: EC2 -> Load balancers`, select Load Balancer for the Dockstore, select `Network mapping` tab and get an ID of the subnet for the AZ of the deployment `subnet-xxxxx`
+A private IP address needs to be selected for the ENI association to the EIP of the EC2 instance we are about to create. Please follow these steps in to identify available private IP addresses within private subnet that corresponds to the Availability Zone (AZ) for the deployment (as specified by `TF_VAR_availability_zone` environment variable):
+1. Access Subnets through `AWS Console: VPC -> VPCs`, select Unity-Dev-VPC, select `Unity-Dev-Priv-SubnetXX` tab and get an ID of the subnet for the AZ of the deployment `subnet-xxxxx`
 2. Set temporary AWS access keys using `MCP Tenant Systems Administrator` role in Kion
 3. Run command, which will display all private IPs in use:
    ```aws ec2 describe-network-interfaces --filters Name=subnet-id,Values=subnet-xxxxx | grep 'PrivateIpAddress":' | grep -v ','| sort```
