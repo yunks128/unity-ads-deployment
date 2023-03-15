@@ -164,7 +164,7 @@ Parameters:
     Type: AWS::SSM::Parameter::Value<String>
     Default: /DeploymentConfig/dev/AuthorizerType
   LatestAMI:
-    Description: The golden AMI to create EC2 with
+    Description: The latest golden AMI to create EC2 with
     Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
     Default: /mcp/amis/ubuntu2004
 
@@ -336,13 +336,6 @@ Parameters:
 #    Description: The AWS Certificate Manager ARN
 #    Type: AWS::SSM::Parameter::Value<String>
 #    Default: /DeploymentConfig/dev/LoadBalancerCertificateArn
-
-# Mappings:
-#   Regions:
-#     us-west-1:
-#       ubuntu20ami: 'ami-043738bfa891187cc' # Ubuntu Focal 20.04-20210315
-#     us-west-2:
-#       ubuntu20ami: 'ami-043738bfa891187cc' # Ubuntu Focal 20.04-20210315
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -917,10 +910,6 @@ Resources:
     Properties:
       AvailabilityZone: !Ref AvailabilityZone
       ImageId: !Ref LatestAMI
-      # ImageId: !FindInMap
-      #   - Regions
-      #   - !Ref 'AWS::Region'
-      #   - !Ref LatestAMI
       InstanceType: !Ref InstanceType
       IamInstanceProfile: !Ref InstanceProfile
       BlockDeviceMappings:
