@@ -18,6 +18,7 @@ resource "aws_cloudformation_stack" "dockstore_app" {
     DockstoreDeployVersion = "${var.dockstore_deploy_version}"
     UiVersion = "${var.uiversion}"
     GalaxyPluginVersion = "${var.galaxy_plugin_version}" 
+    ENIPrivateIP = "${var.eni_private_ip}"
 
     #These inputs are AWS Session Manager Parameter Store paths
     AuthorizerType =  "/DeploymentConfig/${var.resource_prefix}/AuthorizerType"
