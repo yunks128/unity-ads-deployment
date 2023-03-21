@@ -1,1 +1,1 @@
-../common/vpc.tf
+../../common/vpc.tf
