@@ -40,13 +40,13 @@ Parameters:
 # Account ids from https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/enable-access-logs.html
 Mappings:
   Regions:
-    #us-east-1:
-    #  ELBAccountId: 'arn:aws:iam::127311923021:root'
+    us-east-1:
+      ELBAccountId: 'arn:aws:iam::127311923021:root'
     us-west-2:
       ELBAccountId: 'arn:aws:iam::797873946194:root'
-    #us-east-2:
-    #  ELBAccountId: 'arn:aws:iam::033677994240:root'
-
+    us-east-2:
+      ELBAccountId: 'arn:aws:iam::033677994240:root'
+ 
 Resources:
   StartupBucketManagedPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -60,6 +60,8 @@ Resources:
           Effect: Allow
           Resource: !Join ['', [!GetAtt S3Bucket.Arn, '/*']]
 
+
+
   S3Bucket:
     Type: AWS::S3::Bucket
     DeletionPolicy: Delete
@@ -67,10 +69,10 @@ Resources:
       BucketName: !Ref BucketName
       AccessControl: Private
       PublicAccessBlockConfiguration:
-        BlockPublicAcls: true
-        BlockPublicPolicy: true
-        IgnorePublicAcls: true
-        RestrictPublicBuckets: true
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
@@ -86,12 +88,12 @@ Resources:
     DeletionPolicy: Delete
     Properties:
       BucketName: !Ref ELBLogsBucketName
-      AccessControl: Private
+      AccessControl: PublicReadWrite
       PublicAccessBlockConfiguration:
-        BlockPublicAcls: true
-        BlockPublicPolicy: true
-        IgnorePublicAcls: true
-        RestrictPublicBuckets: true
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
@@ -113,7 +115,7 @@ Outputs:
     Value: !Ref StartupBucketManagedPolicy
     Export:
       Name: !Sub '${AWS::StackName}-StartupBucketManagedPolicy'
-  ElbLogsBucket:
+  ElbLogsBucketName:
     Description: The name of the S3 bucket that was created
     Value: !Ref 'ElbLogsBucket'
     Export:
