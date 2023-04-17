@@ -44,6 +44,10 @@ Parameters:
     Description: 'Name of the database (ignored when DBSnapshotIdentifier is set, value used from snapshot).'
     Type: String
     Default: dev
+  DBSnapshot:
+    Description: 'AWS ARN of the RDB snapshot to restore new deployment of the database from. Create empty DB if not provided.'
+    Type: String
+    Default: ''
   DBBackupRetentionPeriod:
     Description: 'The number of days to keep snapshots of the database.'
     Type: Number
@@ -94,6 +98,7 @@ Metadata:
           - DBName
           - DBBackupRetentionPeriod
           - DBMasterUserPassword
+          - DBSnapshot
           - DBMultiAZ
           - PreferredBackupWindow
           - PreferredMaintenanceWindow
@@ -129,8 +134,9 @@ Resources:
       CopyTagsToSnapshot: true
       DBInstanceClass: !Ref DBInstanceClass
       DBName: !Ref DBName
+      DBSnapshotIdentifier: !Ref DBSnapshot
       DBSubnetGroupName: !Ref DBSubnetGroup
-      EnableCloudwatchLogsExports: 
+      EnableCloudwatchLogsExports:
         - postgresql
         - upgrade
       EnablePerformanceInsights: true
