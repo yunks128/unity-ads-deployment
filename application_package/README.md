@@ -45,6 +45,9 @@ export TF_VAR_api_id=value1
 export TF_VAR_api_parent_id=value2
 export TF_VAR_availability_zone=us-west-2b
 
+# Optional variable to set AWS ARN for the database snapshot to preserve database between the application deployments. If default empty string is used for the ARN, then empty database is created.
+export TF_VAR_db_snapshot=""
+
 # Do not worry about populating these tokens correctly for infrastructure/initial deploy (step #1 below), they will need to be set for the deployment of the Dockstore API in step #2:
 export TF_VAR_dockstore_token=""
 export TF_VAR_eni_private_ip=""
@@ -61,6 +64,8 @@ Where:
 Note: Both ID values are accessible through `AWS Console: API Gateway -> Unity API Gateway` where upper toolbar lists the ID values: `APIs > Unity API Gateway (value1) > Resources > /ads (value2)`
 
 `availability_zone` - the availability zone requested for the DB and other resources and should match available subnets availability zones.
+
+`db_snapshot` - optional AWS ARN of the manual database snapshot. Please be aware that automatically generated backup snapshots will be deleted when original database is destroyed. To preserve database between deployments user needs to create manual database snapshot through `AWS Console:  RDB -> Select awsdbdockstorestack-dbinstance* database -> "Maintenance & backups" tab -> "Take snapshot" under "Actions"`.
 
 `dockstore_token` - the Dockstore administrator account token that will be used for the GitHub Lambda authentication. The token is accessible from the Dockstore user account once the Dockstore application is deployed and administrator user is registered with the application. Please note that `dockstore_token` cannot be set until after the Dockstore application has been deployed in the `#2. Application Deployment` step (please see below).
 
