@@ -4,35 +4,26 @@ POSTGRESQL_USER=quayuser
 POSTGRESQL_PASSWORD=quaypass
 POSTGRESQL_DATABASE=quay
 POSTGRESQL_ADMIN_PASSWORD=adminpass
-REDIS_PASSWORD=strongpassword 
+REDIS_PASSWORD=strongpassword
+
+POSTGRESQL_DOCKER_LABEL=docker.io/centos/postgresql-10-centos7@sha256:de1560cb35e5ec643e7b3a772ebaac8e3a7a2a8e8271d9e91ff023539b4dfb33
+REDIS_DOCKER_LABEL=docker.io/centos/redis-32-centos7@sha256:06dbb609484330ec6be6090109f1fa16e936afcf975d1cbc5fff3e6c7cae7542
+QUAY_DOCKER_LABEL=quay.io/projectquay/quay:v3.8.0
 
 server_ip=10.88.0.1
 
 # Administration scripts
-postgres_script=$QUAY_DIR/bin/start_postgresql.sh
-redis_script=$QUAY_DIR/bin/start_redis.sh
-quay_script=$QUAY_DIR/bin/start_quay.sh
-rerun_script=$QUAY_DIR/bin/restart_all.sh
+postgresql_unit_file=/etc/systemd/system/postgresql-quay.service
+postgresql_service_name=$(basename $postgresql_unit_file | sed 's/.service$//')
 
-# Function to initialize scripts created for each component
-function init_script {
-    script_filename=$1
+redis_unit_file=/etc/systemd/system/redis-quay.service
+redis_service_name=$(basename $redis_unit_file | sed 's/.service$//')
 
-    (
-    cat <<EOF
-#!/bin/bash
-QUAY_DIR=$QUAY_DIR
-POSTGRESQL_USER=$POSTGRESQL_USER
-POSTGRESQL_PASSWORD=$POSTGRESQL_PASSWORD
-POSTGRESQL_DATABASE=$POSTGRESQL_DATABASE
-POSTGRESQL_ADMIN_PASSWORD=$POSTGRESQL_ADMIN_PASSWORD
-REDIS_PASSWORD=$REDIS_PASSWORD
+quay_unit_file=/etc/systemd/system/quay-server.service
+quay_service_name=$(basename $quay_unit_file | sed 's/.service$//')
 
-EOF
-) > $script_filename
-
-    chmod u+x $script_filename
-}
+################################################################################
+# System setup
 
 # Install podman
 yum update -y
@@ -44,68 +35,90 @@ yum module install -y container-tools postgresql
 
 # Turn off SELinux for now or else get memory permission errors
 setenforce 0
+sed -i '/SELINUXTYPE/s/targeted/permissive/' /etc/selinux/config
 
-# Create quay bin directory for scripts we will create for launching the service
-mkdir -p $QUAY_DIR/bin
-setfacl -m u:26:-wx $QUAY_DIR/bin
-
-####
+################################################################################
 ## Postgres
 
 # Create a directory for the database data and set the permissions appropriately
 mkdir -p $QUAY_DIR/postgres-quay
 setfacl -m u:26:-wx $QUAY_DIR/postgres-quay
 
-# Create a reusable script for launching postgres
-init_script $postgres_script
-
+# Create a systemd unit file for Postgresql
 (
 cat <<EOF
-podman container stop -i postgresql-quay
-podman container rm -i postgresql-quay
+[Unit]
+Description=PostgreSQL Podman Container for Quay
+After=network.target
 
-podman run -d --rm --name postgresql-quay \
-  -e POSTGRESQL_USER=\$POSTGRESQL_USER \
-  -e POSTGRESQL_PASSWORD=\$POSTGRESQL_PASSWORD \
-  -e POSTGRESQL_DATABASE=\$POSTGRESQL_DATABASE \
-  -e POSTGRESQL_ADMIN_PASSWORD=\$POSTGRESQL_ADMIN_PASSWORD \
-  -p 5432:5432 \
-  -v $QUAY_DIR/postgres-quay:/var/lib/pgsql/data:Z \
-  docker.io/centos/postgresql-10-centos7@sha256:de1560cb35e5ec643e7b3a772ebaac8e3a7a2a8e8271d9e91ff023539b4dfb33
+[Service]
+Type=simple
+TimeoutStartSec=5m
+ExecStartPre=-/usr/bin/podman rm "postgresql-quay"
+
+ExecStart=podman run --rm --name postgresql-quay -e POSTGRESQL_USER=$POSTGRESQL_USER -e POSTGRESQL_PASSWORD=$POSTGRESQL_PASSWORD -e POSTGRESQL_DATABASE=$POSTGRESQL_DATABASE -e POSTGRESQL_ADMIN_PASSWORD=$POSTGRESQL_ADMIN_PASSWORD -p 5432:5432 -v $QUAY_DIR/postgres-quay:/var/lib/pgsql/data:Z $POSTGRESQL_DOCKER_LABEL
+
+ExecReload=-/usr/bin/podman stop "postgresql-quay"
+ExecReload=-/usr/bin/podman rm "postgresql-quay"
+ExecStop=-/usr/bin/podman stop "postgresql-quay"
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target
 EOF
-) >> $postgres_script
+) > $postgresql_unit_file
 
 # Start the Postgres container
-$postgres_script
-
-# Wait for postgres to come up
-sleep 2
+systemctl daemon-reload
+systemctl enable $postgresql_service_name
+systemctl start $postgresql_service_name
+systemctl status --no-pager $postgresql_service_name
 
 # Register pg_trgm extension into database needed by Quay
-echo "CREATE EXTENSION pg_trgm;" | PGPASSWORD=$POSTGRESQL_ADMIN_PASSWORD psql -h localhost -p 5432 $POSTGRESQL_DATABASE postgres
+# Wait for postgresql to come up 5 times
+RETRIES=5
 
-####
+until echo "CREATE EXTENSION pg_trgm;" | PGPASSWORD=$POSTGRESQL_ADMIN_PASSWORD psql -h localhost -p 5432 $POSTGRESQL_DATABASE postgres >/dev/null 2>&1 || [ $RETRIES -eq 0 ]; do
+  echo "Waiting for postgres server, $((RETRIES--)) remaining attempts..."
+  sleep 1
+done
+
+################################################################################
 # Redis
 
-# Create a reusable script for launching redis
-init_script $redis_script
-
+# Create a systemd unit file for redis
 (
 cat <<EOF
-podman container stop -i redis-quay
-podman container rm -i redis-quay
+[Unit]
+Description=Redis Podman Container for Quay
+After=network.target
 
-podman run -d --rm --name redis-quay \
-  -p 6379:6379 \
-  -e REDIS_PASSWORD=\$REDIS_PASSWORD \
-  docker.io/centos/redis-32-centos7@sha256:06dbb609484330ec6be6090109f1fa16e936afcf975d1cbc5fff3e6c7cae7542
+[Service]
+Type=simple
+TimeoutStartSec=5m
+ExecStartPre=-/usr/bin/podman rm "redis-quay"
+
+ExecStart=podman run --rm --name redis-quay -p 6379:6379 -e REDIS_PASSWORD=$REDIS_PASSWORD $REDIS_DOCKER_LABEL
+
+ExecReload=-/usr/bin/podman stop "redis-quay"
+ExecReload=-/usr/bin/podman rm "redis-quay"
+ExecStop=-/usr/bin/podman stop "redis-quay"
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target
 EOF
-) >> $redis_script
+) > $redis_unit_file
 
 # Start the Redis container
-$redis_script
+systemctl daemon-reload
+systemctl enable $redis_service_name
+systemctl start $redis_service_name
+systemctl status --no-pager $redis_service_name
 
-####
+################################################################################
 ## Quay
 
 quay_config_filename=$QUAY_DIR/config/config.yaml
@@ -117,12 +130,12 @@ mkdir $QUAY_DIR/config
 cat <<EOF
 AUTHENTICATION_TYPE: Database
 BUILDLOGS_REDIS:
-    host: ${server_ip} 
-    password: ${REDIS_PASSWORD}
+    host: $server_ip 
+    password: $REDIS_PASSWORD
     port: 6379
 DATABASE_SECRET_KEY: 190a2d63-1416-4047-9736-f0efc00fec7a
 DB_CONNECTION_ARGS: {}
-DB_URI: postgresql://${POSTGRESQL_USER}:${POSTGRESQL_PASSWORD}@${server_ip}:5432/${POSTGRESQL_DATABASE}
+DB_URI: postgresql://$POSTGRESQL_USER:$POSTGRESQL_PASSWORD@$server_ip:5432/$POSTGRESQL_DATABASE
 DISTRIBUTED_STORAGE_CONFIG:
     default:
         - LocalStorage
@@ -130,8 +143,8 @@ DISTRIBUTED_STORAGE_CONFIG:
 SERVER_HOSTNAME: localhost:80
 SETUP_COMPLETE: true
 USER_EVENTS_REDIS:
-    host: ${server_ip} 
-    password: ${REDIS_PASSWORD}
+    host: $server_ip 
+    password: $REDIS_PASSWORD
     port: 6379
 EOF
 ) > $quay_config_filename
@@ -140,38 +153,34 @@ EOF
 mkdir $QUAY_DIR/storage
 setfacl -m u:1001:-wx $QUAY_DIR/storage
 
-# Create a reusable script for launching quay
-init_script $quay_script
-
+# Create a systemd unit file for quay
 (
 cat <<EOF
-podman container stop -i quay-server
-podman container rm -i quay-server
+[Unit]
+Description=Quay Podman Container 
+Requires=$postgresql_service_name $redis_service_name
+After=$postgresql_service_name $redis_service_name
 
-podman run -d --rm -p 80:8080 -p 443:8443  \
-   --name=quay-server \
-   -v \$QUAY_DIR/config:/conf/stack:Z \
-   -v \$QUAY_DIR/storage:/datastorage:Z \
-   quay.io/projectquay/quay:v3.8.0
+[Service]
+Type=simple
+TimeoutStartSec=5m
+ExecStartPre=-/usr/bin/podman rm "quay-server"
+
+ExecStart=podman run --rm -p 80:8080 -p 443:8443 --name=quay-server -v $QUAY_DIR/config:/conf/stack:Z -v $QUAY_DIR/storage:/datastorage:Z $QUAY_DOCKER_LABEL
+
+ExecReload=-/usr/bin/podman stop "quay-server"
+ExecReload=-/usr/bin/podman rm "quay-server"
+ExecStop=-/usr/bin/podman stop "quay-server"
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target
 EOF
-) >> $quay_script
+) > $quay_unit_file
 
-# Deploy the Project Quay registry
-$quay_script
-
-####
-## Rerun script
-
-# Create a script for rerunning everything for instance if the server is shut down
-init_script $rerun_script
-
-(
-cat <<EOF
-# Turn off SELinux for now or else get memory permission errors
-setenforce 0
-
-$postgres_script
-$redis_script
-$quay_script
-EOF
-) >> $rerun_script
+# Start the Redis container
+systemctl daemon-reload
+systemctl enable $quay_service_name
+systemctl start $quay_service_name
+systemctl status --no-pager $quay_service_name
