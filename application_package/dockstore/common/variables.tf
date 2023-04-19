@@ -28,10 +28,6 @@ variable "availability_zone" {
   default = "us-west-2d"
 }
 
-variable "eni_private_ip" {
-  description = "Private IP to use for the ENI associated with EC2"
-  type = string
-}
 
 variable "db_snapshot" {
   description = "AWS ARN of the RDB snapshot to restore new deployment of the database from"

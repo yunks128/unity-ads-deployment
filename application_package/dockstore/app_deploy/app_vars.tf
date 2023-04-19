@@ -30,5 +30,8 @@ variable "galaxy_plugin_version" {
   default     = "0.0.7"
 }
 
-
+variable "eni_private_ip" {
+  description = "Private IP to use for the ENI associated with EC2"
+  type = string
+}
 
