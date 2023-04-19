@@ -45,10 +45,13 @@ export TF_VAR_api_id=value1
 export TF_VAR_api_parent_id=value2
 export TF_VAR_availability_zone=us-west-2b
 
-# Optional variable to set AWS ARN for the database snapshot to preserve database between the application deployments. If default empty string is used for the ARN, then empty database is created.
+# Optional variable to set AWS ARN for the database manual snapshot to preserve
+# database between the application deployments.
+# If default empty string is used for the ARN, then newly created database will be empty.
 export TF_VAR_db_snapshot=""
 
-# Do not worry about populating these tokens correctly for infrastructure/initial deploy (step #1 below), they will need to be set for the deployment of the Dockstore API in step #2:
+# Do not worry about populating these tokens correctly for infrastructure/initial deploy (step #1 below),
+# they will need to be set for the deployment of the Dockstore API in step #2:
 export TF_VAR_dockstore_token=""
 export TF_VAR_eni_private_ip=""
 ```
