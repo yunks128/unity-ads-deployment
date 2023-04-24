@@ -8,6 +8,9 @@ POSTGRESQL_DATABASE=quay
 POSTGRESQL_ADMIN_PASSWORD=adminpass
 REDIS_PASSWORD=strongpassword
 
+# Number of seconds to try updating postgresql server to enable the pg_trgm extension
+DB_UPDATE_RETRIES=20
+
 POSTGRESQL_DOCKER_LABEL=docker.io/centos/postgresql-10-centos7@sha256:de1560cb35e5ec643e7b3a772ebaac8e3a7a2a8e8271d9e91ff023539b4dfb33
 REDIS_DOCKER_LABEL=docker.io/centos/redis-32-centos7@sha256:06dbb609484330ec6be6090109f1fa16e936afcf975d1cbc5fff3e6c7cae7542
 QUAY_DOCKER_LABEL=quay.io/projectquay/quay:v3.8.0
@@ -78,11 +81,9 @@ systemctl start $postgresql_service_name
 systemctl status --no-pager $postgresql_service_name
 
 # Register pg_trgm extension into database needed by Quay
-# Wait for postgresql to come up 5 times
-RETRIES=5
-
-until echo "CREATE EXTENSION pg_trgm;" | PGPASSWORD=$POSTGRESQL_ADMIN_PASSWORD psql -h localhost -p 5432 $POSTGRESQL_DATABASE postgres >/dev/null 2>&1 || [ $RETRIES -eq 0 ]; do
-  echo "Waiting for postgres server, $((RETRIES--)) remaining attempts..."
+# Wait for postgresql to come up
+until echo "CREATE EXTENSION pg_trgm;" | PGPASSWORD=$POSTGRESQL_ADMIN_PASSWORD psql -h localhost -p 5432 $POSTGRESQL_DATABASE postgres >/dev/null 2>&1 || [ $DB_UPDATE_RETRIES -eq 0 ]; do
+  echo "Waiting for postgres server, $((DB_UPDATE_RETRIES--)) remaining attempts..."
   sleep 1
 done
 
