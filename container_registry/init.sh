@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Configuration
 QUAY_DIR=/usr/local/quay
 POSTGRESQL_USER=quayuser
