@@ -23,9 +23,15 @@ variable "s3_identifier" {
 }
 
 variable "cognito_oauth_base_url" {
-  description = "Base URL for the Cognito deployment to authorize against"
+  description = "Base URL for using the Cognito Open Auth 2 interface"
   type        = string
   default     = "https://unitysds.auth.us-west-2.amazoncognito.com"
+}
+
+variable "cognito_oidc_base_url" {
+  description = "Base URL for using the Cognito OIDC interface"
+  type        = string
+  default     = "https://cognito-idp.us-west-2.amazonaws.com"
 }
 
 variable "cognito_user_pool_name" {

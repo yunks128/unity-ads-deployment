@@ -3,10 +3,10 @@
 # Configuration
 QUAY_DIR=/usr/local/quay
 POSTGRESQL_USER=quayuser
-POSTGRESQL_PASSWORD=quaypass
+POSTGRESQL_PASSWORD=${postgresql_user_password}
 POSTGRESQL_DATABASE=quay
-POSTGRESQL_ADMIN_PASSWORD=adminpass
-REDIS_PASSWORD=strongpassword
+POSTGRESQL_ADMIN_PASSWORD=${postgresql_admin_password}
+REDIS_PASSWORD=${redis_password}
 
 # Number of seconds to try updating postgresql server to enable the pg_trgm extension
 DB_UPDATE_RETRIES=20
@@ -36,7 +36,9 @@ yum update -y
 # Install:
 # * Ability to run podman containers
 # * Postgresql commandline interface
+# * screen for debugging interactively
 yum module install -y container-tools postgresql
+yum install -y screen
 
 # Turn off SELinux for now or else get memory permission errors
 setenforce 0
@@ -132,6 +134,7 @@ mkdir $QUAY_DIR/config
 (
 cat <<EOF
 AUTHENTICATION_TYPE: Database
+FEATURE_DIRECT_LOGIN: False
 BUILDLOGS_REDIS:
     host: $server_ip 
     password: $REDIS_PASSWORD
@@ -149,6 +152,14 @@ USER_EVENTS_REDIS:
     host: $server_ip 
     password: $REDIS_PASSWORD
     port: 6379
+FEATURE_ANONYMOUS_ACCESS: False
+FEATURE_USER_CREATION: False
+FEATURE_MAILING: False
+UNITY_LOGIN_CONFIG:
+    CLIENT_ID: ${cognito_quay_client_id}
+    CLIENT_SECRET: ${cognito_quay_client_secret}
+    OIDC_SERVER: ${cognito_oidc_base_url}/${cognito_user_pool_id}/
+    SERVICE_NAME: Unity SPS
 EOF
 ) > $quay_config_filename
 

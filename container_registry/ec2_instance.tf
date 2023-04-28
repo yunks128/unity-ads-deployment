@@ -6,6 +6,25 @@ data "aws_ssm_parameter" "ami" {
   name = "/mcp/amis/rhel8"
 }
 
+data "aws_cognito_user_pools" "unity_user_pool" {
+  name = var.cognito_user_pool_name
+}
+
+resource "random_password" "postgresql_user_password" {
+  length           = 25
+  special          = false
+}
+
+resource "random_password" "postgresql_admin_password" {
+  length           = 25
+  special          = false
+}
+
+resource "random_password" "redis_password" {
+  length           = 25
+  special          = false
+}
+
 resource "aws_instance" "quay_ec2" {
   ami            = data.aws_ssm_parameter.ami.value
   instance_type  = "t2.medium"
@@ -31,6 +50,13 @@ resource "aws_instance" "quay_ec2" {
   }
 
   user_data = templatefile("init.sh", {
+    cognito_oidc_base_url = var.cognito_oidc_base_url
+    cognito_user_pool_id = tolist(data.aws_cognito_user_pools.unity_user_pool.ids)[0]
+    cognito_quay_client_id = var.cognito_quay_client_id
+    cognito_quay_client_secret = var.cognito_quay_client_secret
+    postgresql_user_password = random_password.postgresql_user_password.result
+    postgresql_admin_password = random_password.postgresql_admin_password.result
+    redis_password = random_password.redis_password.result
   })
 
 }
