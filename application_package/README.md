@@ -36,7 +36,7 @@ Deploys these Unity ADS services:
 
 ## S3 bucket to store Load Balancer Logs
 MCP does not allow us to create S3 bucket policies, so we need to create S3 bucket manually before deploying the application.
-Please use the following tags when creating the S3 bucket from **AWS Console: S3** (with an example of "development" environment):
+Please use the following tags when creating the S3 bucket from `AWS Console: S3` (with an example of "development" environment):
 
 * ServiceArea:	ads
 * Proj: unity
