@@ -34,6 +34,16 @@ Deploys these Unity ADS services:
 	* Shared Storage
 	* EC2 Support Instance
 
+## S3 bucket to store Load Balancer Logs
+MCP does not allow us to create S3 bucket policies, so we need to create S3 bucket manually before deploying the application.
+Please use the following tags when creating the S3 bucket from **AWS Console: S3** (with an example of "development" environment):
+
+* ServiceArea:	ads
+* Proj: unity
+* Venue: Dev
+* Component: Dockstore
+* Env: Dev
+* Stack: Dockstore
   
 ## Setting up Development Environment
 
@@ -44,6 +54,7 @@ export TF_VAR_resource_prefix=dev
 export TF_VAR_api_id=value1
 export TF_VAR_api_parent_id=value2
 export TF_VAR_availability_zone=us-west-2b
+export TF_VAR_lb_logs_bucket_name="uads-dev-dockstore-elb-logs"
 
 # Optional variable to set AWS ARN for the database manual snapshot to preserve
 # database between the application deployments.
@@ -67,6 +78,8 @@ Where:
 Note: Both ID values are accessible through `AWS Console: API Gateway -> Unity API Gateway` where upper toolbar lists the ID values: `APIs > Unity API Gateway (value1) > Resources > /ads (value2)`
 
 `availability_zone` - the availability zone requested for the DB and other resources and should match available subnets availability zones.
+
+`lb_logs_bucket_name` - the name of manually created S3 bucket to store application's Load Balancer logs. 
 
 `db_snapshot` - optional AWS ARN of the manual database snapshot. Please be aware that automatically generated backup snapshots will be deleted when original database is destroyed. To preserve database between deployments user needs to create manual database snapshot through `AWS Console:  RDB -> Select awsdbdockstorestack-dbinstance* database -> "Maintenance & backups" tab -> "Take snapshot" under "Actions"`.
 
