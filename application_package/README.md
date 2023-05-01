@@ -45,6 +45,8 @@ Please use the following tags when creating the S3 bucket from **AWS Console: S3
 * Env: Dev
 * Stack: Dockstore
   
+Once the bucket is created, please submit an MCP request to attach the bucket policy to allow for Load Balancer logs to be stored in the bucket (per [AWS docs](https://docs.aws.amazon.com/elasticloadbalancing/latest/application/enable-access-logging.html)). Once S3 bucket's policy has been attached, proceed to the application deployment.
+
 ## Setting up Development Environment
 
 For each deployment instance (ie. development, test, production) define the following environment variables to customize the install to the environment. For example, for the `dev` (development) deployment you would defined the following variables:
