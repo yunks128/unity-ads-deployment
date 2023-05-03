@@ -15,7 +15,7 @@ POSTGRESQL_DOCKER_LABEL=docker.io/centos/postgresql-10-centos7@sha256:de1560cb35
 REDIS_DOCKER_LABEL=docker.io/centos/redis-32-centos7@sha256:06dbb609484330ec6be6090109f1fa16e936afcf975d1cbc5fff3e6c7cae7542
 QUAY_DOCKER_LABEL=quay.io/projectquay/quay:v3.8.0
 
-server_ip=10.88.0.1
+internal_service_ip=10.88.0.1
 
 # Administration scripts
 postgresql_unit_file=/etc/systemd/system/postgresql-quay.service
@@ -136,24 +136,26 @@ cat <<EOF
 AUTHENTICATION_TYPE: Database
 FEATURE_DIRECT_LOGIN: False
 BUILDLOGS_REDIS:
-    host: $server_ip 
+    host: $internal_service_ip 
     password: $REDIS_PASSWORD
     port: 6379
 DATABASE_SECRET_KEY: 190a2d63-1416-4047-9736-f0efc00fec7a
 DB_CONNECTION_ARGS: {}
-DB_URI: postgresql://$POSTGRESQL_USER:$POSTGRESQL_PASSWORD@$server_ip:5432/$POSTGRESQL_DATABASE
+DB_URI: postgresql://$POSTGRESQL_USER:$POSTGRESQL_PASSWORD@$internal_service_ip:5432/$POSTGRESQL_DATABASE
 DISTRIBUTED_STORAGE_CONFIG:
     default:
         - LocalStorage
         - storage_path: /datastorage/registry
-SERVER_HOSTNAME: localhost:80
+SERVER_HOSTNAME: ${quay_server_hostname}:${quay_server_external_port}
+PREFERRED_URL_SCHEME: https
+EXTERNAL_TLS_TERMINATION: True
 SETUP_COMPLETE: true
 USER_EVENTS_REDIS:
-    host: $server_ip 
+    host: $internal_service_ip 
     password: $REDIS_PASSWORD
     port: 6379
 FEATURE_ANONYMOUS_ACCESS: False
-FEATURE_USER_CREATION: False
+FEATURE_USER_CREATION: True
 FEATURE_MAILING: False
 UNITY_LOGIN_CONFIG:
     CLIENT_ID: ${cognito_quay_client_id}
@@ -180,7 +182,7 @@ Type=simple
 TimeoutStartSec=5m
 ExecStartPre=-/usr/bin/podman rm "quay-server"
 
-ExecStart=podman run --rm -p 80:8080 -p 443:8443 --name=quay-server -v $QUAY_DIR/config:/conf/stack:Z -v $QUAY_DIR/storage:/datastorage:Z $QUAY_DOCKER_LABEL
+ExecStart=podman run --rm -p ${quay_server_internal_port}:8080 --name=quay-server -v $QUAY_DIR/config:/conf/stack:Z -v $QUAY_DIR/storage:/datastorage:Z $QUAY_DOCKER_LABEL
 
 ExecReload=-/usr/bin/podman stop "quay-server"
 ExecReload=-/usr/bin/podman rm "quay-server"

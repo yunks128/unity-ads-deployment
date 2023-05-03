@@ -34,7 +34,7 @@ resource "aws_instance" "quay_ec2" {
   availability_zone = data.aws_subnet.quay_subnet.availability_zone
   subnet_id         = data.aws_subnet.quay_subnet.id
 
-  vpc_security_group_ids = [ aws_security_group.quay_sg.id ]
+  vpc_security_group_ids = [ aws_security_group.quay_ec2_sg.id ]
 
   iam_instance_profile = "MCP-SSM-CloudWatch"
 
@@ -50,6 +50,9 @@ resource "aws_instance" "quay_ec2" {
   }
 
   user_data = templatefile("init.sh", {
+    quay_server_hostname = aws_lb.quay_alb.dns_name
+    quay_server_external_port = var.load_balancer_port
+    quay_server_internal_port = var.quay_server_port
     cognito_oidc_base_url = var.cognito_oidc_base_url
     cognito_user_pool_id = tolist(data.aws_cognito_user_pools.unity_user_pool.ids)[0]
     cognito_quay_client_id = var.cognito_quay_client_id
@@ -59,6 +62,14 @@ resource "aws_instance" "quay_ec2" {
     redis_password = random_password.redis_password.result
   })
 
+  # Need to wait for ALB to get created
+  depends_on = [ aws_lb.quay_alb ]
+}
+
+resource "aws_lb_target_group_attachment" "quay_target_attachment" {
+  target_group_arn = aws_lb_target_group.quay_alb_target_group.arn
+  target_id        = aws_instance.quay_ec2.id
+  port             = var.quay_server_port
 }
 
 output "instance_id" {

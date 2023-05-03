@@ -16,16 +16,10 @@ resource "aws_lb_target_group" "quay_alb_target_group" {
   vpc_id      = data.aws_vpc.unity_vpc.id
 
   protocol         = "HTTP"
-  port             = var.quay_proxy_port
+  port             = var.quay_server_port
 
   tags = {
     name = "${var.resource_prefix}-${var.tenant_identifier}-alb-target-group"
-  }
-
-  # alter the destination of the health check
-  health_check {
-    path = "${local.quay_base_path}/hub/health"
-    port = var.quay_proxy_port
   }
 }
 
@@ -35,7 +29,7 @@ resource "tls_self_signed_cert" "quay_alb_certificate_data" {
   dns_names = [ aws_lb.quay_alb.dns_name ]
 
   subject {
-    common_name  = "Unity ${var.tenant_identifier} JupyterHub"
+    common_name  = "Unity ${var.tenant_identifier} Quay Docker Server"
     organization = "${var.unity_instance}"
   }
 
@@ -61,7 +55,7 @@ resource "random_id" "cert" {
 
 # For example, this can be used to populate an AWS IAM server certificate.
 resource "aws_iam_server_certificate" "quay_alb_server_certificate" {
-  name             = "Unity-${var.tenant_identifier}-JupyterHub-Certificate-${random_id.cert.hex}"
+  name             = "Unity-${var.tenant_identifier}-Quay-Certificate-${random_id.cert.hex}"
   certificate_body = tls_self_signed_cert.quay_alb_certificate_data.cert_pem
   private_key      = file("private_key.pem")
 
@@ -88,10 +82,6 @@ resource "aws_lb_listener" "quay_alb_listener" {
 
 locals {
   quay_base_url = "https://${aws_lb.quay_alb.dns_name}:${var.load_balancer_port}"
-}
-
-locals {
-  quay_base_path = "/"
 }
 
 output "quay_base_uri" {
