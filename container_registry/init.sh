@@ -9,13 +9,12 @@ POSTGRESQL_ADMIN_PASSWORD=${postgresql_admin_password}
 REDIS_PASSWORD=${redis_password}
 
 # Number of seconds to try updating postgresql server to enable the pg_trgm extension
-DB_UPDATE_RETRIES=20
+# Account for time it takes to install the postgresql Docker image for the first time
+DB_UPDATE_RETRIES=60
 
 POSTGRESQL_DOCKER_LABEL=docker.io/centos/postgresql-10-centos7@sha256:de1560cb35e5ec643e7b3a772ebaac8e3a7a2a8e8271d9e91ff023539b4dfb33
 REDIS_DOCKER_LABEL=docker.io/centos/redis-32-centos7@sha256:06dbb609484330ec6be6090109f1fa16e936afcf975d1cbc5fff3e6c7cae7542
 QUAY_DOCKER_LABEL=quay.io/projectquay/quay:v3.8.0
-
-internal_service_ip=10.88.0.1
 
 # Administration scripts
 postgresql_unit_file=/etc/systemd/system/postgresql-quay.service
@@ -30,44 +29,49 @@ quay_service_name=$(basename $quay_unit_file | sed 's/.service$//')
 ################################################################################
 # System setup
 
-# Install podman
+# Install EPEL and update repositories
+yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 yum update -y
 
 # Install:
-# * Ability to run podman containers
+# * Ability to run docker containers
 # * Postgresql commandline interface
 # * screen for debugging interactively
-yum module install -y container-tools postgresql
-yum install -y screen
+yum install -y docker postgresql screen
 
-# Turn off SELinux for now or else get memory permission errors
-setenforce 0
-sed -i '/SELINUXTYPE/s/targeted/permissive/' /etc/selinux/config
+# Start docker
+systemctl enable docker
+systemctl start docker
+
+# Determine the Docker gateway address for Quay to use to connect to Redis and Postgresql
+docker_internal_ip=$(ip -family inet -oneline -brief address | grep docker | head -n 1 | awk '{print $3}' | sed 's|/[0-9]*$||')
 
 ################################################################################
 ## Postgres
 
 # Create a directory for the database data and set the permissions appropriately
-mkdir -p $QUAY_DIR/postgres-quay
-setfacl -m u:26:-wx $QUAY_DIR/postgres-quay
+postgresql_data_dir=$QUAY_DIR/postgresql-quay
+
+mkdir -p $postgresql_data_dir 
+setfacl -m u:26:-wx $postgresql_data_dir
 
 # Create a systemd unit file for Postgresql
 (
 cat <<EOF
 [Unit]
-Description=PostgreSQL Podman Container for Quay
+Description=PostgreSQL Docker Container for Quay
 After=network.target
 
 [Service]
 Type=simple
 TimeoutStartSec=5m
-ExecStartPre=-/usr/bin/podman rm "postgresql-quay"
+ExecStartPre=-/usr/bin/docker rm "postgresql-quay"
 
-ExecStart=podman run --rm --name postgresql-quay -e POSTGRESQL_USER=$POSTGRESQL_USER -e POSTGRESQL_PASSWORD=$POSTGRESQL_PASSWORD -e POSTGRESQL_DATABASE=$POSTGRESQL_DATABASE -e POSTGRESQL_ADMIN_PASSWORD=$POSTGRESQL_ADMIN_PASSWORD -p 5432:5432 -v $QUAY_DIR/postgres-quay:/var/lib/pgsql/data:Z $POSTGRESQL_DOCKER_LABEL
+ExecStart=/usr/bin/docker run --rm --name postgresql-quay -e POSTGRESQL_USER=$POSTGRESQL_USER -e POSTGRESQL_PASSWORD=$POSTGRESQL_PASSWORD -e POSTGRESQL_DATABASE=$POSTGRESQL_DATABASE -e POSTGRESQL_ADMIN_PASSWORD=$POSTGRESQL_ADMIN_PASSWORD -p 5432:5432 -v $postgresql_data_dir:/var/lib/pgsql/data:Z $POSTGRESQL_DOCKER_LABEL
 
-ExecReload=-/usr/bin/podman stop "postgresql-quay"
-ExecReload=-/usr/bin/podman rm "postgresql-quay"
-ExecStop=-/usr/bin/podman stop "postgresql-quay"
+ExecReload=-/usr/bin/docker stop "postgresql-quay"
+ExecReload=-/usr/bin/docker rm "postgresql-quay"
+ExecStop=-/usr/bin/docker stop "postgresql-quay"
 Restart=always
 RestartSec=30
 
@@ -96,19 +100,19 @@ done
 (
 cat <<EOF
 [Unit]
-Description=Redis Podman Container for Quay
+Description=Redis Docker Container for Quay
 After=network.target
 
 [Service]
 Type=simple
 TimeoutStartSec=5m
-ExecStartPre=-/usr/bin/podman rm "redis-quay"
+ExecStartPre=-/usr/bin/docker rm "redis-quay"
 
-ExecStart=podman run --rm --name redis-quay -p 6379:6379 -e REDIS_PASSWORD=$REDIS_PASSWORD $REDIS_DOCKER_LABEL
+ExecStart=/usr/bin/docker run --rm --name redis-quay -p 6379:6379 -e REDIS_PASSWORD=$REDIS_PASSWORD $REDIS_DOCKER_LABEL
 
-ExecReload=-/usr/bin/podman stop "redis-quay"
-ExecReload=-/usr/bin/podman rm "redis-quay"
-ExecStop=-/usr/bin/podman stop "redis-quay"
+ExecReload=-/usr/bin/docker stop "redis-quay"
+ExecReload=-/usr/bin/docker rm "redis-quay"
+ExecStop=-/usr/bin/docker stop "redis-quay"
 Restart=always
 RestartSec=30
 
@@ -136,12 +140,12 @@ cat <<EOF
 AUTHENTICATION_TYPE: Database
 FEATURE_DIRECT_LOGIN: False
 BUILDLOGS_REDIS:
-    host: $internal_service_ip 
+    host: $docker_internal_ip 
     password: $REDIS_PASSWORD
     port: 6379
 DATABASE_SECRET_KEY: 190a2d63-1416-4047-9736-f0efc00fec7a
 DB_CONNECTION_ARGS: {}
-DB_URI: postgresql://$POSTGRESQL_USER:$POSTGRESQL_PASSWORD@$internal_service_ip:5432/$POSTGRESQL_DATABASE
+DB_URI: postgresql://$POSTGRESQL_USER:$POSTGRESQL_PASSWORD@$docker_internal_ip:5432/$POSTGRESQL_DATABASE
 DISTRIBUTED_STORAGE_CONFIG:
     default:
         - LocalStorage
@@ -151,7 +155,7 @@ PREFERRED_URL_SCHEME: https
 EXTERNAL_TLS_TERMINATION: True
 SETUP_COMPLETE: true
 USER_EVENTS_REDIS:
-    host: $internal_service_ip 
+    host: $docker_internal_ip 
     password: $REDIS_PASSWORD
     port: 6379
 FEATURE_ANONYMOUS_ACCESS: False
@@ -173,20 +177,20 @@ setfacl -m u:1001:-wx $QUAY_DIR/storage
 (
 cat <<EOF
 [Unit]
-Description=Quay Podman Container 
+Description=Quay Docker Container 
 Requires=$postgresql_service_name $redis_service_name
 After=$postgresql_service_name $redis_service_name
 
 [Service]
 Type=simple
 TimeoutStartSec=5m
-ExecStartPre=-/usr/bin/podman rm "quay-server"
+ExecStartPre=-/usr/bin/docker rm "quay-server"
 
-ExecStart=podman run --rm -p ${quay_server_internal_port}:8080 --name=quay-server -v $QUAY_DIR/config:/conf/stack:Z -v $QUAY_DIR/storage:/datastorage:Z $QUAY_DOCKER_LABEL
+ExecStart=/usr/bin/docker run --rm -p ${quay_server_internal_port}:8080 --name=quay-server -v $QUAY_DIR/config:/conf/stack:Z -v $QUAY_DIR/storage:/datastorage:Z $QUAY_DOCKER_LABEL
 
-ExecReload=-/usr/bin/podman stop "quay-server"
-ExecReload=-/usr/bin/podman rm "quay-server"
-ExecStop=-/usr/bin/podman stop "quay-server"
+ExecReload=-/usr/bin/docker stop "quay-server"
+ExecReload=-/usr/bin/docker rm "quay-server"
+ExecStop=-/usr/bin/docker stop "quay-server"
 Restart=always
 RestartSec=30
 

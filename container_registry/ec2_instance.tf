@@ -3,7 +3,7 @@ data "aws_subnet" "quay_subnet" {
 }
 
 data "aws_ssm_parameter" "ami" {
-  name = "/mcp/amis/rhel8"
+  name = "/mcp/amis/aml2"
 }
 
 data "aws_cognito_user_pools" "unity_user_pool" {
