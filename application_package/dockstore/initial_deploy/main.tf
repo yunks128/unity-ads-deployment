@@ -38,6 +38,8 @@ module "load_balancer" {
     resource_prefix = "${var.resource_prefix}"
     api_id = "${var.api_id}"
     api_parent_id = "${var.api_parent_id}"
+    lb_logs_bucket_name = "${var.lb_logs_bucket_name}"
+    lb_logs_bucket_prefix = "${var.lb_logs_bucket_prefix}"
 
     depends_on = [
         module.s3
@@ -63,6 +65,7 @@ module "database" {
     resource_prefix = "${var.resource_prefix}"
     api_id = "${var.api_id}"
     api_parent_id = "${var.api_parent_id}"
+    db_snapshot = "${var.db_snapshot}"
 
     depends_on = [
         module.core
@@ -87,7 +90,7 @@ module "elasticsearch" {
     resource_prefix = "${var.resource_prefix}"
     api_id = "${var.api_id}"
     api_parent_id = "${var.api_parent_id}"
-    
+
     depends_on = [
         module.es-log-groups
     ]

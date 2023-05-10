@@ -105,6 +105,15 @@ Metadata:
           - EngineVersion
           - EnableIAMDatabaseAuthentication
 
+# If using DB snapshot to restore DB from, then can't use DBName to create
+# AWS::RDS::DBInstance
+Conditions:
+  UseDbSnapshot:
+    !Not
+      - !Equals
+        - !Ref DBSnapshot
+        - ''
+
 Resources:
 
   DBSubnetGroup:
@@ -133,19 +142,49 @@ Resources:
       BackupRetentionPeriod: !Ref DBBackupRetentionPeriod
       CopyTagsToSnapshot: true
       DBInstanceClass: !Ref DBInstanceClass
-      DBName: !Ref DBName
-      DBSnapshotIdentifier: !Ref DBSnapshot
+      # DBName: !Ref DBName
+      DBName:
+        !If
+        - UseDbSnapshot
+        - !Ref AWS::NoValue
+        - !Ref DBName
+      # DBSnapshotIdentifier: !Ref DBSnapshot
+      DBSnapshotIdentifier:
+        !If
+        - UseDbSnapshot
+        - !Ref DBSnapshot
+        - !Ref AWS::NoValue
       DBSubnetGroupName: !Ref DBSubnetGroup
       EnableCloudwatchLogsExports:
         - postgresql
         - upgrade
-      EnablePerformanceInsights: true
+      # EnablePerformanceInsights: true
+      EnablePerformanceInsights:
+        !If
+          - UseDbSnapshot
+          - !Ref AWS::NoValue
+          - true
       Engine: postgres
       EngineVersion: !Ref EngineVersion
-      MasterUsername: postgres
-      MasterUserPassword: !Ref DBMasterUserPassword
+      # MasterUsername: postgres
+      MasterUsername:
+        !If
+          - UseDbSnapshot
+          - !Ref AWS::NoValue
+          - postgres
+      # MasterUserPassword: !Ref DBMasterUserPassword
+      MasterUserPassword:
+        !If
+          - UseDbSnapshot
+          - !Ref AWS::NoValue
+          - !Ref DBMasterUserPassword
       MultiAZ: !Ref DBMultiAZ
-      StorageEncrypted: true
+      # StorageEncrypted: true
+      StorageEncrypted:
+        !If
+          - UseDbSnapshot
+          - !Ref AWS::NoValue
+          - true
       StorageType: gp2
       VPCSecurityGroups:
       - !Ref DBSecurityGroup

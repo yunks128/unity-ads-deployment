@@ -28,6 +28,17 @@ variable "availability_zone" {
   default = "us-west-2d"
 }
 
+variable "lb_logs_bucket_name" {
+  description = "The name of manually created S3 bucket to store Load Balancer logs"
+  type = string
+  default = "uads-dev-dockstore-elb-logs"
+}
+
+variable "lb_logs_bucket_prefix" {
+  description = "The prefix for the location in the S3 bucket for the Load Balancer access logs"
+  type = string
+  default = "AccessLogs"
+}
 
 variable "db_snapshot" {
   description = "AWS ARN of the RDB snapshot to restore new deployment of the database from"

@@ -12,7 +12,7 @@ Parameters:
     Description: Env prefix (dev or test)
     Type: String
     Default: 'dev'
-  VpcId: 
+  VpcId:
     Description: ID for the VPC the LB is to be within
     Type: String
   SubnetId1:
@@ -20,6 +20,12 @@ Parameters:
     Type: String
   SubnetId2:
     Description: ID for the second subnet the LB is to be accessible on
+    Type: String
+  LBLogsS3BucketName:
+    Description: The name of the S3 bucket for the LB logs
+    Type: String
+  LBLogsS3BucketPrefix:
+    Description: The prefix for the location in the S3 bucket for the LB access logs
     Type: String
   LoadBalancerIdleTimeout:
     Description: The idle timeout value, in seconds
@@ -94,9 +100,9 @@ Resources:
         - Key: "access_logs.s3.enabled"
           Value: 'true'
         - Key: "access_logs.s3.bucket"
-          Value:
-            Fn::ImportValue:
-              !Sub '${S3Stack}-ElbLogsBucket'
+          Value: !Sub '${LBLogsS3BucketName}'
+        - Key: "access_logs.s3.prefix"
+          Value: !Sub '${LBLogsS3BucketPrefix}'
         - Key: "deletion_protection.enabled"
           Value: 'false'
       Name: !Sub '${AWS::StackName}-lb'
@@ -104,8 +110,8 @@ Resources:
       SecurityGroups:
         - !Ref LbSecurityGroup
       Subnets:
-         - !Ref SubnetId1 
-         - !Ref SubnetId2 
+         - !Ref SubnetId1
+         - !Ref SubnetId2
       Type: application
       Tags:
         - Key: Name

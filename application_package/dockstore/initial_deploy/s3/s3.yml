@@ -26,11 +26,6 @@ Parameters:
     Type: String
     MinLength: 1
     Default: uads-dev-dockstore-startup
-  ELBLogsBucketName:
-    Description: The bucket name for ELB Logs
-    Type: String
-    MinLength: 1
-    Default: uads-dev-dockstore-elb-logs
   ResourcePrefix:
     Description: The resource prefix (dev or test)
     Type: String
@@ -46,7 +41,7 @@ Mappings:
       ELBAccountId: 'arn:aws:iam::797873946194:root'
     us-east-2:
       ELBAccountId: 'arn:aws:iam::033677994240:root'
- 
+
 Resources:
   StartupBucketManagedPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -60,19 +55,17 @@ Resources:
           Effect: Allow
           Resource: !Join ['', [!GetAtt S3Bucket.Arn, '/*']]
 
-
-
   S3Bucket:
     Type: AWS::S3::Bucket
     DeletionPolicy: Delete
     Properties:
       BucketName: !Ref BucketName
       AccessControl: Private
-      PublicAccessBlockConfiguration:
-        BlockPublicAcls: false
-        BlockPublicPolicy: false
-        IgnorePublicAcls: false
-        RestrictPublicBuckets: false
+      # PublicAccessBlockConfiguration:
+      #   BlockPublicAcls: false
+      #   BlockPublicPolicy: false
+      #   IgnorePublicAcls: false
+      #   RestrictPublicBuckets: false
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
@@ -83,26 +76,6 @@ Resources:
         - Key: Environment
           Value: !Sub '${ResourcePrefix}'
 
-  ElbLogsBucket:
-    Type: AWS::S3::Bucket
-    DeletionPolicy: Delete
-    Properties:
-      BucketName: !Ref ELBLogsBucketName
-      AccessControl: PublicReadWrite
-      PublicAccessBlockConfiguration:
-        BlockPublicAcls: false
-        BlockPublicPolicy: false
-        IgnorePublicAcls: false
-        RestrictPublicBuckets: false
-      BucketEncryption:
-        ServerSideEncryptionConfiguration:
-          - ServerSideEncryptionByDefault:
-              SSEAlgorithm: AES256
-      Tags:
-        - Key: Name
-          Value: !Sub '${AWS::StackName}-elb-logs-bucket'
-        - Key: Environment
-          Value: !Sub '${ResourcePrefix}'
 
 Outputs:
   S3BucketName:
@@ -111,13 +84,8 @@ Outputs:
     Export:
       Name: !Sub '${AWS::StackName}-S3BucketName'
   StartupBucketManagedPolicy:
-    Description: Role to get get S3 items
+    Description: Role to get S3 items
     Value: !Ref StartupBucketManagedPolicy
     Export:
       Name: !Sub '${AWS::StackName}-StartupBucketManagedPolicy'
-  ElbLogsBucketName:
-    Description: The name of the S3 bucket that was created
-    Value: !Ref 'ElbLogsBucket'
-    Export:
-      Name: !Sub '${AWS::StackName}-ElbLogsBucket'
 
