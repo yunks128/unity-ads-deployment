@@ -159,8 +159,8 @@ GitHub App talks to the AWS Lambda, which will be deployed later in step `3. Lam
 If the GitHub App already exists, you only need to update `Homepage URL` and `Callback URL` in its configuration, and continue to step `3. Lambda Deployment`.
 
 If it is very first time setting up the environment, please register new GitHub App using the following configuration:
-* Homepage URL: `<LOAD_BALANCER_DNS_NAME>:9998`
-* Callback URL: `<LOAD_BALANCER_DNS_NAME>:9998`
+* Homepage URL: `http://<LOAD_BALANCER_DNS_NAME>:9998`
+* Callback URL: `http://<LOAD_BALANCER_DNS_NAME>:9998`
 * Expire user authorization tokens: enable
 * Request User authorization (OAuth) during installation: enable
 * Webhook URL:
