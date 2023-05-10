@@ -34,7 +34,35 @@ Deploys these Unity ADS services:
 	* Shared Storage
 	* EC2 Support Instance
 
+## S3 bucket to store Load Balancer Logs
+MCP does not allow us to create S3 bucket policies, so we need to create S3 bucket manually before deploying the application.
+Please use the following tags when creating the S3 bucket from `AWS Console: S3` (with an example of "development" environment):
+
+* ServiceArea:	ads
+* Proj: unity
+* Venue: Dev
+* Component: Dockstore
+* Env: Dev
+* Stack: Dockstore
   
+Once the bucket is created, please submit an MCP request to attach the bucket policy to allow for Load Balancer logs to be stored in the bucket (per [AWS docs](https://docs.aws.amazon.com/elasticloadbalancing/latest/application/enable-access-logging.html)). Once S3 bucket's policy has been attached, proceed to the application deployment. Default prefix for the location in the S3 bucket for the Load Balancer logs is `AccessLogs` which should be specified within S3 bucket policy (please take a note of it when submitting the MCP request for the bucket policy):
+
+```
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "arn:aws:iam::797873946194:root"
+            },
+            "Action": "s3:PutObject",
+            "Resource": "arn:aws:s3:::uads-dev-dockstore-elb-logs/AccessLogs/AWSLogs/237868187491/*"
+        }
+    ]
+}
+```
+
 ## Setting up Development Environment
 
 For each deployment instance (ie. development, test, production) define the following environment variables to customize the install to the environment. For example, for the `dev` (development) deployment you would defined the following variables:
@@ -44,6 +72,10 @@ export TF_VAR_resource_prefix=dev
 export TF_VAR_api_id=value1
 export TF_VAR_api_parent_id=value2
 export TF_VAR_availability_zone=us-west-2b
+
+# Default settings which can be changed through these environment variables
+export TF_VAR_lb_logs_bucket_name="uads-dev-dockstore-elb-logs"
+export TF_VAR_lb_logs_bucket_prefix="AccessLogs"
 
 # Optional variable to set AWS ARN for the database manual snapshot to preserve
 # database between the application deployments.
@@ -67,6 +99,10 @@ Where:
 Note: Both ID values are accessible through `AWS Console: API Gateway -> Unity API Gateway` where upper toolbar lists the ID values: `APIs > Unity API Gateway (value1) > Resources > /ads (value2)`
 
 `availability_zone` - the availability zone requested for the DB and other resources and should match available subnets availability zones.
+
+`lb_logs_bucket_name` - the name of manually created S3 bucket to store application's Load Balancer logs. 
+
+`lb_logs_bucket_prefix` - the prefix for the location in the S3 bucket for the Load Balancer access logs.
 
 `db_snapshot` - optional AWS ARN of the manual database snapshot. Please be aware that automatically generated backup snapshots will be deleted when original database is destroyed. To preserve database between deployments user needs to create manual database snapshot through `AWS Console:  RDB -> Select awsdbdockstorestack-dbinstance* database -> "Maintenance & backups" tab -> "Take snapshot" under "Actions"`.
 
@@ -97,8 +133,10 @@ A private IP address needs to be selected for the ENI association to the EIP of 
 2. Set temporary AWS access keys using `MCP Tenant Systems Administrator` role in Kion
 3. Run command, which will display all private IPs in use:
    ```aws ec2 describe-network-interfaces --filters Name=subnet-id,Values=subnet-xxxxx | grep 'PrivateIpAddress":' | grep -v ','| sort```
-4. Select any not used private IP address for the subnet
-5. Set `TF_VAR_eni_private_ip` to the selected IP address
+4. Select any not used private IP address for the subnet: `private_ip_value`
+5. Set `TF_VAR_eni_private_ip` to the selected IP address:
+
+    `export TF_VAR_eni_private_ip="private_ip_value"`
 
 #### Deployment
 The steps are as follows:
@@ -121,8 +159,8 @@ GitHub App talks to the AWS Lambda, which will be deployed later in step `3. Lam
 If the GitHub App already exists, you only need to update `Homepage URL` and `Callback URL` in its configuration, and continue to step `3. Lambda Deployment`.
 
 If it is very first time setting up the environment, please register new GitHub App using the following configuration:
-* Homepage URL: `<LOAD_BALANCER_DNS_NAME>:9998`
-* Callback URL: `<LOAD_BALANCER_DNS_NAME>:9998`
+* Homepage URL: `http://<LOAD_BALANCER_DNS_NAME>:9998`
+* Callback URL: `http://<LOAD_BALANCER_DNS_NAME>:9998`
 * Expire user authorization tokens: enable
 * Request User authorization (OAuth) during installation: enable
 * Webhook URL:
