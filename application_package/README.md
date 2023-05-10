@@ -133,8 +133,10 @@ A private IP address needs to be selected for the ENI association to the EIP of 
 2. Set temporary AWS access keys using `MCP Tenant Systems Administrator` role in Kion
 3. Run command, which will display all private IPs in use:
    ```aws ec2 describe-network-interfaces --filters Name=subnet-id,Values=subnet-xxxxx | grep 'PrivateIpAddress":' | grep -v ','| sort```
-4. Select any not used private IP address for the subnet
-5. Set `TF_VAR_eni_private_ip` to the selected IP address
+4. Select any not used private IP address for the subnet: `private_ip_value`
+5. Set `TF_VAR_eni_private_ip` to the selected IP address:
+
+    `export TF_VAR_eni_private_ip="private_ip_value"`
 
 #### Deployment
 The steps are as follows:
