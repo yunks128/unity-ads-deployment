@@ -106,6 +106,16 @@ Note: Both ID values are accessible through `AWS Console: API Gateway -> Unity A
 
 `db_snapshot` - optional AWS ARN of the manual database snapshot. Please be aware that automatically generated backup snapshots will be deleted when original database is destroyed. To preserve database between deployments user needs to create manual database snapshot through `AWS Console:  RDB -> Select awsdbdockstorestack-dbinstance* database -> "Maintenance & backups" tab -> "Take snapshot" under "Actions"`.
 
+NOTE: We used RDB snapshot as database restore approach between deployments while the Dockstore team shared their approach which we have not tested. This is the 
+Dockstore team approach to be aware of in  case RDB restored from the AWS RDB snapshot reveals any issues (please see [github related issue](https://github.com/unity-sds/unity-ads-deployment/issues/89) for more details):
+```
+We don't bring down the RDS between deployments, if we want to keep the same data between deployments.
+
+If we do want to copy the DB to a new deployment, we do pg_dump, which saves the DB as a SQL file, then we run the SQL file against the new DB. It's a little more complex than that, depending on whether you want to to restore tokens or not; unfortunately those scripts are in our private repo.
+
+We haven't tried restoring from RDS snapshots, although that's seemingly the more obvious route. It interacts weirdly with CloudFormation; it creates a new domain, so then you need to update the web service to reference the new domain, modify security groups, etc.
+```
+
 `dockstore_token` - the Dockstore administrator account token that will be used for the GitHub Lambda authentication. The token is accessible from the Dockstore user account once the Dockstore application is deployed and administrator user is registered with the application. Please note that `dockstore_token` cannot be set until after the Dockstore application has been deployed in the `#2. Application Deployment` step (please see below).
 
 `eni_private_ip` - Pre-defined IP address to associate with ENI (Elastic Network Interface). This private IP address within private subnet (corresponding to the AZ for the deployment) is associated with EIP of the EC2 instance where the Dockstore API is running. This address needs to be manually picked from any available IP addresses within the private subnet that corresponds to the AZ for the deployment.
