@@ -61,11 +61,6 @@ Resources:
     Properties:
       BucketName: !Ref BucketName
       AccessControl: Private
-      # PublicAccessBlockConfiguration:
-      #   BlockPublicAcls: false
-      #   BlockPublicPolicy: false
-      #   IgnorePublicAcls: false
-      #   RestrictPublicBuckets: false
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           - ServerSideEncryptionByDefault:
