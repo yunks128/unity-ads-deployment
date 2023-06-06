@@ -18,7 +18,6 @@ resource "aws_cloudformation_stack" "core" {
 }
 
 
-
 resource "aws_api_gateway_deployment" "ApiRedeploy" {
   rest_api_id = "${var.api_id}"
   stage_name  = "${var.resource_prefix}"

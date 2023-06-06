@@ -44,6 +44,10 @@ Parameters:
     Description: 'Name of the database (ignored when DBSnapshotIdentifier is set, value used from snapshot).'
     Type: String
     Default: dev
+  DBSnapshot:
+    Description: 'AWS ARN of the RDB snapshot to restore new deployment of the database from. Create empty DB if not provided.'
+    Type: String
+    Default: ''
   DBBackupRetentionPeriod:
     Description: 'The number of days to keep snapshots of the database.'
     Type: Number
@@ -94,11 +98,21 @@ Metadata:
           - DBName
           - DBBackupRetentionPeriod
           - DBMasterUserPassword
+          - DBSnapshot
           - DBMultiAZ
           - PreferredBackupWindow
           - PreferredMaintenanceWindow
           - EngineVersion
           - EnableIAMDatabaseAuthentication
+
+# If using DB snapshot to restore DB from, then can't use DBName to create
+# AWS::RDS::DBInstance
+Conditions:
+  UseDbSnapshot:
+    !Not
+      - !Equals
+        - !Ref DBSnapshot
+        - ''
 
 Resources:
 
@@ -128,18 +142,43 @@ Resources:
       BackupRetentionPeriod: !Ref DBBackupRetentionPeriod
       CopyTagsToSnapshot: true
       DBInstanceClass: !Ref DBInstanceClass
-      DBName: !Ref DBName
+      DBName:
+        !If
+        - UseDbSnapshot
+        - !Ref AWS::NoValue
+        - !Ref DBName
+      DBSnapshotIdentifier:
+        !If
+        - UseDbSnapshot
+        - !Ref DBSnapshot
+        - !Ref AWS::NoValue
       DBSubnetGroupName: !Ref DBSubnetGroup
-      EnableCloudwatchLogsExports: 
+      EnableCloudwatchLogsExports:
         - postgresql
         - upgrade
-      EnablePerformanceInsights: true
+      EnablePerformanceInsights:
+        !If
+          - UseDbSnapshot
+          - !Ref AWS::NoValue
+          - true
       Engine: postgres
       EngineVersion: !Ref EngineVersion
-      MasterUsername: postgres
-      MasterUserPassword: !Ref DBMasterUserPassword
+      MasterUsername:
+        !If
+          - UseDbSnapshot
+          - !Ref AWS::NoValue
+          - postgres
+      MasterUserPassword:
+        !If
+          - UseDbSnapshot
+          - !Ref AWS::NoValue
+          - !Ref DBMasterUserPassword
       MultiAZ: !Ref DBMultiAZ
-      StorageEncrypted: true
+      StorageEncrypted:
+        !If
+          - UseDbSnapshot
+          - !Ref AWS::NoValue
+          - true
       StorageType: gp2
       VPCSecurityGroups:
       - !Ref DBSecurityGroup

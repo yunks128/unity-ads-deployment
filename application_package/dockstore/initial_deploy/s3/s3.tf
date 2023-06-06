@@ -1,21 +1,19 @@
+locals {
+  startup_bucket_name = "uads-${var.resource_prefix}-dockstore-startup"
+}
+
 resource "aws_cloudformation_stack" "s3" {
   name = "awsS3DockstoreStack"
 
-
   parameters = {
     ResourcePrefix = "${var.resource_prefix}"
-    ELBLogsBucketName = "uads-${var.resource_prefix}-dockstore-elb-logs"
-    BucketName = "uads-${var.resource_prefix}-dockstore-startup"
+    BucketName = "${local.startup_bucket_name}"
   }
-
 
   template_body = file("${path.module}/s3.yml")
   #iam_role_arn = "arn:aws:iam::237868187491:role/uads-dockstore-cf-role"
   capabilities = ["CAPABILITY_NAMED_IAM", "CAPABILITY_IAM"]
-
 }
-
-
 
 
 resource "aws_s3_bucket" "lambda_bucket" {
@@ -118,13 +116,10 @@ resource "aws_s3_object" "sed_script" {
   source = "${path.module}/sed_command.sh"
 
   etag = filemd5("${path.module}/sed_command.sh")
- 
+
   depends_on = [
     aws_cloudformation_stack.s3
   ]
 }
-
-
-
 
 

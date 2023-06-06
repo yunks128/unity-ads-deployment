@@ -166,7 +166,7 @@ Parameters:
   LatestAMI:
     Description: The latest golden AMI to create EC2 with
     Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
-    Default: /mcp/amis/ubuntu2004
+    Default: /mcp/amis/ubuntu2004-cset
 
   #Unused params
   BdCatalystSevenBridgesImportUrl:
@@ -211,19 +211,19 @@ Parameters:
 
 
   #Used
-  #Here domain name is just URL - would be nice to eventually switch to domain names 
-  DomainName:     
+  #Here domain name is just URL - would be nice to eventually switch to domain names
+  DomainName:
     Description: The domain of this Dockstore instance, e.g., dockstore.org, staging.dockstore.org, .dockstore.net
     Type: AWS::SSM::Parameter::Value<String>
     Default: /DeploymentConfig/dev/DomainName
-  FeaturedContentUrl: 
+  FeaturedContentUrl:
     Description: The CloudFront content to populate the featured collection and organization
     Type: AWS::SSM::Parameter::Value<String>
     Default: /DeploymentConfig/dev/FeaturedContentURL
-  FeaturedNewsUrl: 
+  FeaturedNewsUrl:
     Description: The CloudFront content to populate news and events
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/FeaturedNewsURL    
+    Default: /DeploymentConfig/dev/FeaturedNewsURL
   GitHubAppId:
     Description: The GitHub App id
     Type: AWS::SSM::Parameter::Value<String>
@@ -398,8 +398,8 @@ Resources:
   InstanceProfile:
     Type: "AWS::IAM::InstanceProfile"
     Properties:
-      Roles: 
-       - "DockstoreInstanceRole" 
+      Roles:
+       - "DockstoreInstanceRole"
 
   DockstoreEIP:
     Type: AWS::EC2::EIP
@@ -585,8 +585,8 @@ Resources:
               command: mkdir github-key
               cwd: "/home/ubuntu"
             "02_aws_cp":
-              command: 
-               !Join 
+              command:
+               !Join
                 - ""
                 - - "aws s3 cp s3://"
                   - Fn::ImportValue: !Sub "${S3Stack}-S3BucketName"
@@ -603,7 +603,7 @@ Resources:
               cwd: "/home/ubuntu/compose_setup/"
             "06_aws_cp_2":
               command:
-               !Join 
+               !Join
                 - ""
                 - - "aws s3 cp s3://"
                   - Fn::ImportValue: !Sub "${S3Stack}-S3BucketName"
@@ -629,7 +629,7 @@ Resources:
               command: bash ./sed_command.sh
               cwd: "/home/ubuntu/compose_setup/"
             "10_sed_2":
-              command: 
+              command:
                !Join
                - ""
                - - "sed -i 's/uads-test-dockstore-deploy-lb-1762603872.us-west-2.elb.amazonaws.com/"
@@ -643,7 +643,7 @@ Resources:
                command: sed -i 's/:443//g' config/web.yml
                cwd: "/home/ubuntu/compose_setup/"
             "13_sed_5":
-               command: 
+               command:
                  !Join
                   - ""
                   - - "sed -i 's/ gitHubRedirectPath: .*/ gitHubRedirectPath: http:\\/\\/"
@@ -661,7 +661,7 @@ Resources:
             "15_index_2":
                command:
                 !Join
-                - "" 
+                - ""
                 - - "curl -X PUT \""
                   - Fn::ImportValue: !Sub "${ElasticsearchStack}-ESDomainEndpoint"
                   - "/tools\" -H 'Content-Type: application/json' -d'{ \"settings\" : { \"index\" : {} }}'"
@@ -966,7 +966,7 @@ Resources:
           apt-get -qq -y install python3-pip
           apt install -y postgresql-client-common postgresql-client-12
           # Install cfn-bootstrap
-          wget --quiet https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-py3-2.0-6.tar.gz -O /root/aws-cfn-bootstrap.tar.gz 
+          wget --quiet https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-py3-2.0-6.tar.gz -O /root/aws-cfn-bootstrap.tar.gz
           tar xzf /root/aws-cfn-bootstrap.tar.gz -C /root
           pip3 install /root/aws-cfn-bootstrap.tar.gz
 
@@ -1052,7 +1052,7 @@ Resources:
       GroupId:
         Fn::ImportValue: !Sub '${RdsStack}-DBSecurityGroup'
       SourceSecurityGroupId: !Ref DockstoreServerSecurityGroup
- 
+
   #Modify the ES security group to add ingress rules allowing traffic from Dockstore instance SG
   DockstoreElasticsearchSecurityGroupIngress:
     Type: AWS::EC2::SecurityGroupIngress
@@ -1078,7 +1078,7 @@ Resources:
       Name: !Sub '${AWS::StackName}-80'
       Port: 80
       Protocol: HTTP
-      VpcId: !Ref VpcId 
+      VpcId: !Ref VpcId
       Targets:
         - Id: !Ref DockstoreInstance
           Port: 80
@@ -1096,7 +1096,7 @@ Resources:
       Name: !Sub '${AWS::StackName}-8080'
       Port: 8080
       Protocol: HTTP
-      VpcId: !Ref VpcId 
+      VpcId: !Ref VpcId
       Targets:
         - Id: !Ref DockstoreInstance
           Port: 8080
@@ -1105,7 +1105,7 @@ Resources:
   WebACLAssociation:
     Type: AWS::WAFv2::WebACLAssociation
     Properties:
-      ResourceArn:  
+      ResourceArn:
        Fn::ImportValue: !Sub "${LoadBalancerStack}-LoadBalancer"
       WebACLArn:
         Fn::ImportValue:
@@ -1120,12 +1120,12 @@ Resources:
       DefaultActions:
         - Type: forward
           TargetGroupArn: !Ref TargetGroupPort80
-      LoadBalancerArn: 
+      LoadBalancerArn:
        Fn::ImportValue: !Sub "${LoadBalancerStack}-LoadBalancer"
       Port: 9998
       Protocol: HTTP
       #SslPolicy: ELBSecurityPolicy-TLS-1-2-Ext-2018-06
- 
+
   #Listen on port 9999 and redirect to port 8080 on EC2
   LbPort9999Listener:
     Type: 'AWS::ElasticLoadBalancingV2::Listener'
@@ -1135,7 +1135,7 @@ Resources:
       DefaultActions:
         - Type: forward
           TargetGroupArn: !Ref TargetGroupPort8080
-      LoadBalancerArn: 
+      LoadBalancerArn:
        Fn::ImportValue: !Sub "${LoadBalancerStack}-LoadBalancer"
       Port: 9999
       Protocol: HTTP
@@ -1150,10 +1150,10 @@ Resources:
       DefaultActions:
         - Type: forward
           TargetGroupArn: !Ref TargetGroupPort80
-      LoadBalancerArn: 
+      LoadBalancerArn:
        Fn::ImportValue: !Sub "${LoadBalancerStack}-LoadBalancer"
       Port: 80
       Protocol: HTTP
       #SslPolicy: ELBSecurityPolicy-TLS-1-2-Ext-2018-06
- 
+
 
