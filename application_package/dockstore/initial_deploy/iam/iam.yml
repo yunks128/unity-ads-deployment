@@ -8,6 +8,28 @@ Parameters:
     Type: String
     MaxLength: 128
     Default: dev
+  # Tags for allocated resources
+  ServiceArea:
+    Description: Which service area resource is related to?
+    Type: String
+  Proj:
+    Description: Unity Project
+    Type: String
+  Venue:
+    Description: Venue that the resource is being deployed on.
+    Type: String
+  Component:
+    Description: Unity component
+    Type: String
+  CreatedBy:
+    Description: Same as ServiceArea
+    Type: String
+  Env:
+    Description: Same as Venue
+    Type: String
+  Stack:
+    Description: Same as Component
+    Type: String
 
 Resources:
   EnvironmentTagSsmAccessPolicy:
@@ -49,31 +71,47 @@ Resources:
         AssumeRolePolicyDocument:
           Version: "2012-10-17"
           Statement:
-             Effect: Allow
-             Action:
-               - "sts:AssumeRole"
-             Principal:
-                 Service:
-                  -  cloudformation.amazonaws.com
+            Effect: Allow
+            Action:
+              - "sts:AssumeRole"
+            Principal:
+              Service:
+                -  cloudformation.amazonaws.com
         PermissionsBoundary: !Sub "arn:aws:iam::${AWS::AccountId}:policy/mcp-tenantOperator-AMI-APIG"
         ManagedPolicyArns:
               - "arn:aws:iam::aws:policy/IAMFullAccess"
               - "arn:aws:iam::aws:policy/AmazonS3FullAccess"
               - "arn:aws:iam::aws:policy/AWSCloudFormationFullAccess"
-
+        Tags:
+          - Key: Name
+            Value: !Sub '${AWS::StackName}-cloudformation-role'
+          - Key: ServiceArea
+            Value: !Ref ServiceArea
+          - Key: Proj
+            Value: !Ref Proj
+          - Key: Venue
+            Value: !Ref Venue
+          - Key: Component
+            Value: !Ref Component
+          - Key: CreatedBy
+            Value: !Ref CreatedBy
+          - Key: Env
+            Value: !Ref Env
+          - Key: Stack
+            Value: !Ref Stack
 
   ModifyInstanceMetaDataOptionsRole:
     Type: AWS::IAM::Role
     Properties:
       RoleName: !Sub 'uads-${ResourcePrefix}-meta-role'
       AssumeRolePolicyDocument:
-       Version: "2012-10-17"
-       Statement:
-         - Effect: Allow
-           Principal:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
               Service:
                 - ssm.amazonaws.com
-           Action:
+            Action:
               - 'sts:AssumeRole'
       PermissionsBoundary: !Sub "arn:aws:iam::${AWS::AccountId}:policy/mcp-tenantOperator-AMI-APIG"
       Policies:
@@ -86,6 +124,23 @@ Resources:
                   - 'ec2:ModifyInstanceMetadataOptions'
                   - 'ec2:DescribeInstances'
                 Resource: '*'
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-meta-role'
+        - Key: ServiceArea
+          Value: !Ref ServiceArea
+        - Key: Proj
+          Value: !Ref Proj
+        - Key: Venue
+          Value: !Ref Venue
+        - Key: Component
+          Value: !Ref Component
+        - Key: CreatedBy
+          Value: !Ref CreatedBy
+        - Key: Env
+          Value: !Ref Env
+        - Key: Stack
+          Value: !Ref Stack
 
   DockstoreDeployerPolicy:
     Type: AWS::IAM::ManagedPolicy
@@ -136,5 +191,3 @@ Resources:
             Resource:
                 - 'arn:aws:s3:::cdktoolkit-stagingbucket-*/*'
                 - 'arn:aws:s3:::cdktoolkit-stagingbucket-*'
-
-

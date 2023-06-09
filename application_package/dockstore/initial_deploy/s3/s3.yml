@@ -32,6 +32,29 @@ Parameters:
     MaxLength: 128
     Default: dev
 
+  # Tags for allocated resources
+  ServiceArea:
+    Description: Which service area resource is related to?
+    Type: String
+  Proj:
+    Description: Unity Project
+    Type: String
+  Venue:
+    Description: Venue that the resource is being deployed on.
+    Type: String
+  Component:
+    Description: Unity component
+    Type: String
+  CreatedBy:
+    Description: Same as ServiceArea
+    Type: String
+  Env:
+    Description: Same as Venue
+    Type: String
+  Stack:
+    Description: Same as Component
+    Type: String
+
 # Account ids from https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/enable-access-logs.html
 Mappings:
   Regions:
@@ -68,9 +91,20 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub '${AWS::StackName}-startup-bucket'
-        - Key: Environment
-          Value: !Sub '${ResourcePrefix}'
-
+        - Key: ServiceArea
+          Value: !Ref ServiceArea
+        - Key: Proj
+          Value: !Ref Proj
+        - Key: Venue
+          Value: !Ref Venue
+        - Key: Component
+          Value: !Ref Component
+        - Key: CreatedBy
+          Value: !Ref CreatedBy
+        - Key: Env
+          Value: !Ref Env
+        - Key: Stack
+          Value: !Ref Stack
 
 Outputs:
   S3BucketName:

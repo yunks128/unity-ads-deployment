@@ -9,6 +9,28 @@ Parameters:
     Description: The name of the log group, which equals the domain
     Type: AWS::SSM::Parameter::Value<String>
     Default: /DeploymentConfig/dev/DomainName
+  # Tags for allocated resources
+  ServiceArea:
+    Description: Which service area resource is related to?
+    Type: String
+  Proj:
+    Description: Unity Project
+    Type: String
+  Venue:
+    Description: Venue that the resource is being deployed on.
+    Type: String
+  Component:
+    Description: Unity component
+    Type: String
+  CreatedBy:
+    Description: Same as ServiceArea
+    Type: String
+  Env:
+    Description: Same as Venue
+    Type: String
+  Stack:
+    Description: Same as Component
+    Type: String
 
   CloudTrailLogGroupName:
     Description: The name of the CloudTrail log group
@@ -26,6 +48,23 @@ Resources:
       Type: AWS::Logs::LogGroup
       Properties:
         LogGroupName: !Ref CloudTrailLogGroupName
+        Tags:
+          - Key: Name
+            Value: !Sub '${AWS::StackName}-cloudtrail-lg'
+          - Key: ServiceArea
+            Value: !Ref ServiceArea
+          - Key: Proj
+            Value: !Ref Proj
+          - Key: Venue
+            Value: !Ref Venue
+          - Key: Component
+            Value: !Ref Component
+          - Key: CreatedBy
+            Value: !Ref CreatedBy
+          - Key: Env
+            Value: !Ref Env
+          - Key: Stack
+            Value: !Ref Stack
   # Metric filters for the log group created. These will be displayed as CloudWatch metrics.
   AdminPrivilegedActionsFilter:
     Type: AWS::Logs::MetricFilter
@@ -57,7 +96,7 @@ Resources:
       FilterPattern:  "Terminating due to java.lang.OutOfMemoryError"
       LogGroupName: !Ref LogGroupName
       MetricTransformations:
-        - 
+        -
           MetricValue:  "1"
           MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
           MetricName:  "Out of Memory Count"
@@ -253,13 +292,13 @@ Resources:
     Type: AWS::Logs::MetricFilter
     DependsOn: LogGroup
     Properties:
-     LogGroupName: !Ref LogGroupName
-     FilterPattern: "GET refresh"
-     MetricTransformations:
-       - MetricName: "Refresh Count"
-         MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
-         MetricValue: "1"
-         DefaultValue: 0
+      LogGroupName: !Ref LogGroupName
+      FilterPattern: "GET refresh"
+      MetricTransformations:
+        - MetricName: "Refresh Count"
+          MetricNamespace: !Sub '${LogGroupName}-LogMetrics'
+          MetricValue: "1"
+          DefaultValue: 0
   RefreshCWLCount:
     Type: AWS::Logs::MetricFilter
     DependsOn: LogGroup

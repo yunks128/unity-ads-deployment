@@ -3,7 +3,6 @@ Description: >
   Manages WAF, API Gateway and its queues.
 
 Parameters:
-
   # API Gateway and Queue parameters
   ResourcePrefix:
     Description: The name of the env (dev or test)
@@ -36,6 +35,29 @@ Parameters:
   WAFLogsPrefix:
     Description: The custom prefix to use in S3 Object keys. It's OK to leave this empty (for more info https://docs.aws.amazon.com/firehose/ladev/dev/s3-prefixes.html).
     Default: ''
+    Type: String
+
+  # Tags for allocated resources
+  ServiceArea:
+    Description: Which service area resource is related to?
+    Type: String
+  Proj:
+    Description: Unity Project
+    Type: String
+  Venue:
+    Description: Venue that the resource is being deployed on.
+    Type: String
+  Component:
+    Description: Unity component
+    Type: String
+  CreatedBy:
+    Description: Same as ServiceArea
+    Type: String
+  Env:
+    Description: Same as Venue
+    Type: String
+  Stack:
+    Description: Same as Component
     Type: String
 
 Metadata:
@@ -74,8 +96,20 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub '${AWS::StackName}-webhook-queue'
-        - Key: Environment
-          Value: !Ref ResourcePrefix
+        - Key: ServiceArea
+          Value: !Ref ServiceArea
+        - Key: Proj
+          Value: !Ref Proj
+        - Key: Venue
+          Value: !Ref Venue
+        - Key: Component
+          Value: !Ref Component
+        - Key: CreatedBy
+          Value: !Ref CreatedBy
+        - Key: Env
+          Value: !Ref Env
+        - Key: Stack
+          Value: !Ref Stack
 
   DeadQueue:
     Type: AWS::SQS::Queue
@@ -88,8 +122,20 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub '${AWS::StackName}-dead-queue'
-        - Key: Environment
-          Value: !Ref ResourcePrefix
+        - Key: ServiceArea
+          Value: !Ref ServiceArea
+        - Key: Proj
+          Value: !Ref Proj
+        - Key: Venue
+          Value: !Ref Venue
+        - Key: Component
+          Value: !Ref Component
+        - Key: CreatedBy
+          Value: !Ref CreatedBy
+        - Key: Env
+          Value: !Ref Env
+        - Key: Stack
+          Value: !Ref Stack
 
 
   DockstoreInstanceRole:
@@ -104,7 +150,7 @@ Resources:
             Principal:
               Service: "ec2.amazonaws.com"
             Action: 'sts:AssumeRole'
-      ManagedPolicyArns: 
+      ManagedPolicyArns:
         - !Sub "arn:aws:iam::${AWS::AccountId}:policy/DatalakeKinesisPolicy"
         - !Sub "arn:aws:iam::${AWS::AccountId}:policy/McpToolsAccessPolicy"
         - "arn:aws:iam::aws:policy/AmazonS3FullAccess"
@@ -113,7 +159,24 @@ Resources:
         - "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
         - "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
         - "arn:aws:iam::aws:policy/AmazonSSMFullAccess"
-  
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-instance-role'
+        - Key: ServiceArea
+          Value: !Ref ServiceArea
+        - Key: Proj
+          Value: !Ref Proj
+        - Key: Venue
+          Value: !Ref Venue
+        - Key: Component
+          Value: !Ref Component
+        - Key: CreatedBy
+          Value: !Ref CreatedBy
+        - Key: Env
+          Value: !Ref Env
+        - Key: Stack
+          Value: !Ref Stack
+
   DockstoreEc2Policy:
     Type: AWS::IAM::Policy
     Properties:
@@ -125,11 +188,10 @@ Resources:
             Action:
               - "ec2-instance-connect:SendSSHPublicKey"
               - "ec2:DescribeInstances"
-            Resource: 
+            Resource:
               - "*"
       Roles:
-        - !Ref DockstoreInstanceRole 
-
+        - !Ref DockstoreInstanceRole
 
   ApiGatewayRole:
     Type: AWS::IAM::Role
@@ -142,10 +204,27 @@ Resources:
             Principal:
               Service: "apigateway.amazonaws.com"
             Action: 'sts:AssumeRole'
-      ManagedPolicyArns: 
-        - "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs" 
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-api-gateway-role'
+        - Key: ServiceArea
+          Value: !Ref ServiceArea
+        - Key: Proj
+          Value: !Ref Proj
+        - Key: Venue
+          Value: !Ref Venue
+        - Key: Component
+          Value: !Ref Component
+        - Key: CreatedBy
+          Value: !Ref CreatedBy
+        - Key: Env
+          Value: !Ref Env
+        - Key: Stack
+          Value: !Ref Stack
 
-        
+
   ApiGatewaySqsSendMessagePolicy:
     Type: AWS::IAM::Policy
     Properties:
@@ -161,9 +240,9 @@ Resources:
               - "sqs:SendMessage"
             Resource:
               - "*"
-      Roles:  
+      Roles:
         - !Ref ApiGatewayRole
-              
+
 
   DockstoreResource:
     Type: AWS::ApiGateway::Resource
@@ -249,8 +328,20 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub '${AWS::StackName}-waf-logs-bucket'
-        - Key: Environment
-          Value: !Ref ResourcePrefix
+        - Key: ServiceArea
+          Value: !Ref ServiceArea
+        - Key: Proj
+          Value: !Ref Proj
+        - Key: Venue
+          Value: !Ref Venue
+        - Key: Component
+          Value: !Ref Component
+        - Key: CreatedBy
+          Value: !Ref CreatedBy
+        - Key: Env
+          Value: !Ref Env
+        - Key: Stack
+          Value: !Ref Stack
 
   WAFLogsDeliveryRole:
     Type: AWS::IAM::Role
@@ -266,10 +357,28 @@ Resources:
             Condition:
               StringEquals:
                 'sts:ExternalId': !Ref 'AWS::AccountId'
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-waf-logs-role'
+        - Key: ServiceArea
+          Value: !Ref ServiceArea
+        - Key: Proj
+          Value: !Ref Proj
+        - Key: Venue
+          Value: !Ref Venue
+        - Key: Component
+          Value: !Ref Component
+        - Key: CreatedBy
+          Value: !Ref CreatedBy
+        - Key: Env
+          Value: !Ref Env
+        - Key: Stack
+          Value: !Ref Stack
+
 
   WAFLogsDeliveryPolicy:
-   Type: AWS::IAM::Policy
-   Properties:
+    Type: AWS::IAM::Policy
+    Properties:
       PolicyName: waf-logs-delivery-policy
       PolicyDocument:
         Version: "2012-10-17"
@@ -311,8 +420,20 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub '${AWS::StackName}-waf-stream'
-        - Key: Environment
-          Value: !Ref ResourcePrefix
+        - Key: ServiceArea
+          Value: !Ref ServiceArea
+        - Key: Proj
+          Value: !Ref Proj
+        - Key: Venue
+          Value: !Ref Venue
+        - Key: Component
+          Value: !Ref Component
+        - Key: CreatedBy
+          Value: !Ref CreatedBy
+        - Key: Env
+          Value: !Ref Env
+        - Key: Stack
+          Value: !Ref Stack
 
   WebACL:
     Type: AWS::WAFv2::WebACL
@@ -325,6 +446,23 @@ Resources:
         SampledRequestsEnabled: true
         CloudWatchMetricsEnabled: true
         MetricName: !Sub 'WebACLMetricFor-${AWS::StackName}'
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-web-acl'
+        - Key: ServiceArea
+          Value: !Ref ServiceArea
+        - Key: Proj
+          Value: !Ref Proj
+        - Key: Venue
+          Value: !Ref Venue
+        - Key: Component
+          Value: !Ref Component
+        - Key: CreatedBy
+          Value: !Ref CreatedBy
+        - Key: Env
+          Value: !Ref Env
+        - Key: Stack
+          Value: !Ref Stack
       Rules:
         - Name: AWS-AWSManagedRulesAmazonIpReputationList
           Priority: 0
@@ -444,7 +582,7 @@ Resources:
           VisibilityConfig:
             SampledRequestsEnabled: true
             CloudWatchMetricsEnabled: true
-             # This string must match the Value for Name: Rule defined in the RateBasedWAFAlarm alarm defined below
+            # This string must match the Value for Name: Rule defined in the RateBasedWAFAlarm alarm defined below
             MetricName: !Sub 'IPRateBasedRule-${AWS::StackName}'
           Statement:
             RateBasedStatement:
@@ -458,13 +596,13 @@ Resources:
       AlarmDescription: Send an alert when a request is blocked due to the WAF rate-based rule being triggered
       MetricName: BlockedRequests
       Dimensions:
-       - Name: WebACL
-         Value: acl-07f5f0ec5d5cea976
-       - Name: Region
-         Value: !Ref 'AWS::Region'
-       - Name: Rule
-         # This string must match MetricName (as opposed to the rule name) defined in the IPRateBased rule defined above
-         Value: !Sub 'IPRateBasedRule-${AWS::StackName}'
+        - Name: WebACL
+          Value: acl-07f5f0ec5d5cea976
+        - Name: Region
+          Value: !Ref 'AWS::Region'
+        - Name: Rule
+          # This string must match MetricName (as opposed to the rule name) defined in the IPRateBased rule defined above
+          Value: !Sub 'IPRateBasedRule-${AWS::StackName}'
       Namespace: AWS/WAFV2
       ComparisonOperator: GreaterThanThreshold
       Threshold: 0

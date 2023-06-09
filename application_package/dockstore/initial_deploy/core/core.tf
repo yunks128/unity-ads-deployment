@@ -1,5 +1,9 @@
-resource "aws_cloudformation_stack" "core" {
+locals {
   name = "awsCoreDockstoreStack"
+}
+
+resource "aws_cloudformation_stack" "core" {
+  name = local.name
 
   parameters = {
     RestApiId = "${var.api_id}"
@@ -8,8 +12,23 @@ resource "aws_cloudformation_stack" "core" {
     WebhookQueueName = "/DeploymentConfig/${var.resource_prefix}/WebhookQueueName"
     DeadQueueName = "/DeploymentConfig/${var.resource_prefix}/DeadQueueName"
     WAFLogsBucketName = "uads-${var.resource_prefix}-waf-logs-dockstore"
+
+    # Tags to pass to the CloudFormation resources
+    ServiceArea = local.common_tags.ServiceArea
+    Proj = local.common_tags.Proj
+    Venue = local.common_tags.Venue
+    Component = local.common_tags.Component
+    CreatedBy = local.common_tags.CreatedBy
+    Env = local.common_tags.Env
+    Stack = local.common_tags.Stack
   }
 
+  tags = merge(
+    local.common_tags,
+    {
+      Name = local.name
+    }
+  )
 
   template_body = file("${path.module}/core.yml")
   capabilities = ["CAPABILITY_NAMED_IAM", "CAPABILITY_IAM"]

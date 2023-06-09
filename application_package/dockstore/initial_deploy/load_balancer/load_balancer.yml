@@ -34,6 +34,30 @@ Parameters:
     MinValue: 1
     MaxValue: 4000
 
+  # Tags for allocated resources
+  ServiceArea:
+    Description: Which service area resource is related to?
+    Type: String
+  Proj:
+    Description: Unity Project
+    Type: String
+  Venue:
+    Description: Venue that the resource is being deployed on.
+    Type: String
+  Component:
+    Description: Unity component
+    Type: String
+  CreatedBy:
+    Description: Same as ServiceArea
+    Type: String
+  Env:
+    Description: Same as Venue
+    Type: String
+  Stack:
+    Description: Same as Component
+    Type: String
+
+
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
@@ -86,8 +110,20 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub '${AWS::StackName}-sg-lb-80-443'
-        - Key: Environment
-          Value: !Ref ResourcePrefix
+        - Key: ServiceArea
+          Value: !Ref ServiceArea
+        - Key: Proj
+          Value: !Ref Proj
+        - Key: Venue
+          Value: !Ref Venue
+        - Key: Component
+          Value: !Ref Component
+        - Key: CreatedBy
+          Value: !Ref CreatedBy
+        - Key: Env
+          Value: !Ref Env
+        - Key: Stack
+          Value: !Ref Stack
 
   # An application load balancer
   LoadBalancer:
@@ -110,14 +146,26 @@ Resources:
       SecurityGroups:
         - !Ref LbSecurityGroup
       Subnets:
-         - !Ref SubnetId1
-         - !Ref SubnetId2
+        - !Ref SubnetId1
+        - !Ref SubnetId2
       Type: application
       Tags:
         - Key: Name
           Value: !Sub '${AWS::StackName}-lb'
-        - Key: Environment
-          Value: !Ref ResourcePrefix
+        - Key: ServiceArea
+          Value: !Ref ServiceArea
+        - Key: Proj
+          Value: !Ref Proj
+        - Key: Venue
+          Value: !Ref Venue
+        - Key: Component
+          Value: !Ref Component
+        - Key: CreatedBy
+          Value: !Ref CreatedBy
+        - Key: Env
+          Value: !Ref Env
+        - Key: Stack
+          Value: !Ref Stack
 
 
 Outputs:
