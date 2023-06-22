@@ -68,6 +68,7 @@ Once the bucket is created, please submit an MCP request to attach the bucket po
 For each deployment instance (ie. development, test, production) define the following environment variables to customize the install to the environment. For example, for the `dev` (development) deployment you would defined the following variables:
 
 ```
+export TF_VAR_unity_instance="Unity-Dev"
 export TF_VAR_resource_prefix=dev
 export TF_VAR_api_id=value1
 export TF_VAR_api_parent_id=value2
@@ -89,6 +90,8 @@ export TF_VAR_eni_private_ip=""
 ```
 
 Where:
+
+`unity_instance` - environment for which to deploy the application. Default is "Unity-Dev" which should be consistent with a name of the Unity VPC. Access VPC through `AWS Console: VPC -> VPCs`, select Unity-Dev-VPC. The `unity_instance` should be set to the `Unity-Dev` for the example of `dev` environment.
 
 `resource_prefix` - one of `dev`, `test`, or `prod` and represents the environment is being deployed.
 
