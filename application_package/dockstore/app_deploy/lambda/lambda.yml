@@ -52,7 +52,7 @@ Description: >
   Manages the Dockstore EC2 instances, as well as the lambda that fetches from SQS and invokes the web service.
 
 Parameters:
-  DockstoreLambdaBucket: 
+  DockstoreLambdaBucket:
     Description: The s3 bucket with zip files of Dockstore lambda. Must be in same region as the CF stack. For us-east-1, dockstore.lambda; for us-west-2, dockstore.lambda.us-west.
     Type: String
     Default: 'uads-dev-dockstore-lambda-bucket'
@@ -60,7 +60,7 @@ Parameters:
     Description: The s3 key of the Dockstore lambda zip file
     Type: String
     Default: 'upsertGitHubTag.zip'
-  DockstoreLambdaMaxConcurrency: 
+  DockstoreLambdaMaxConcurrency:
     Description: ReservedConcurrentExecutions for the Dockstore lambda to throttle requests. 0 uses AWS account's remaining unreserved lambda concurrency.
     Type: Number
     Default: 12
@@ -76,12 +76,35 @@ Parameters:
     MinLength: 1
   DockstoreToken:
     Description: The Dockstore token used by the lambda to make API calls to Dockstore
-    Type: String 
+    Type: String
   SecretToken:
     Description: The secret token used by GitHub lambda
     Type: AWS::SSM::Parameter::Value<String>
     Default: /DeploymentConfig/dev/SecretToken
     NoEcho: true
+
+  # Tags for allocated resources
+  ServiceArea:
+    Description: Which service area resource is related to?
+    Type: String
+  Proj:
+    Description: Unity Project
+    Type: String
+  Venue:
+    Description: Venue that the resource is being deployed on.
+    Type: String
+  Component:
+    Description: Unity component
+    Type: String
+  CreatedBy:
+    Description: Same as ServiceArea
+    Type: String
+  Env:
+    Description: Same as Venue
+    Type: String
+  Stack:
+    Description: Same as Component
+    Type: String
 
 
 Metadata:
@@ -137,14 +160,26 @@ Resources:
                   - ':'
                   - Fn::ImportValue: !Sub '${CoreStack}-WebhookQueueName'
             - Effect: Allow
-              Action: 
+              Action:
               - sqs:SendMessage
               Resource: !GetAtt 'GitHubLambdaDeadQueue.Arn'
       Tags:
         - Key: Name
-          Value: !Sub '${AWS::StackName}-lambda-github'
-        - Key: Environment
-          Value: ''
+          Value: !Sub '${AWS::StackName}-lambda-github-iam'
+        - Key: ServiceArea
+          Value: !Ref ServiceArea
+        - Key: Proj
+          Value: !Ref Proj
+        - Key: Venue
+          Value: !Ref Venue
+        - Key: Component
+          Value: !Ref Component
+        - Key: CreatedBy
+          Value: !Ref CreatedBy
+        - Key: Env
+          Value: !Ref Env
+        - Key: Stack
+          Value: !Ref Stack
 
   GitHubQueueLambda:
     Type: AWS::Lambda::Function
@@ -173,8 +208,20 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub '${AWS::StackName}-lambda-github-queue'
-        - Key: Environment
-          Value: ''
+        - Key: ServiceArea
+          Value: !Ref ServiceArea
+        - Key: Proj
+          Value: !Ref Proj
+        - Key: Venue
+          Value: !Ref Venue
+        - Key: Component
+          Value: !Ref Component
+        - Key: CreatedBy
+          Value: !Ref CreatedBy
+        - Key: Env
+          Value: !Ref Env
+        - Key: Stack
+          Value: !Ref Stack
 
   GitHubLambdaDeadQueue:
     Type: AWS::SQS::Queue
@@ -188,8 +235,20 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub '${AWS::StackName}-github-lambda-dead-queue'
-        - Key: Environment
-          Value: ''
+        - Key: ServiceArea
+          Value: !Ref ServiceArea
+        - Key: Proj
+          Value: !Ref Proj
+        - Key: Venue
+          Value: !Ref Venue
+        - Key: Component
+          Value: !Ref Component
+        - Key: CreatedBy
+          Value: !Ref CreatedBy
+        - Key: Env
+          Value: !Ref Env
+        - Key: Stack
+          Value: !Ref Stack
 
   LambdaFunctionEventSourceMapping:
     Type: AWS::Lambda::EventSourceMapping
@@ -206,5 +265,5 @@ Resources:
           - Fn::ImportValue: !Sub '${CoreStack}-WebhookQueueName'
       FunctionName: !GetAtt GitHubQueueLambda.Arn
 
- 
+
 

@@ -33,6 +33,9 @@ resource "aws_cloudformation_stack" "db" {
 
   template_body = file("${path.module}/database.yml")
 
-  timeout_in_minutes = 60
-
+  timeouts {
+    create = "1h"
+    update = "1h"
+    delete = "1h"
+  }
 }

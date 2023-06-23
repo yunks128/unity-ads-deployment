@@ -23,10 +23,11 @@ Parameters:
       # Just support us-east-1 and us-west-2
       #- us-east-1a
       #- us-east-1b
+      # Allow a and b AZs for now - see common/vpc.tf for more information
       - us-west-2a
       - us-west-2b
-      - us-west-2c
-      - us-west-2d
+      # - us-west-2c
+      # - us-west-2d
       #- us-east-2a
       #- us-east-2b
     Default: us-west-2b

@@ -29,6 +29,12 @@ resource "aws_cloudformation_stack" "es" {
 
   template_body = file("${path.module}/elasticsearch.yml")
 
-  timeout_in_minutes = 60
+  timeouts {
+    create = "1h"
+    update = "1h"
+    delete = "1h"
+  }
+
+  /* timeout_in_minutes = 60 */
 }
 
