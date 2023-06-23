@@ -101,7 +101,7 @@ Where:
 
 Note: Both ID values are accessible through `AWS Console: API Gateway -> Unity API Gateway` where upper toolbar lists the ID values: `APIs > Unity API Gateway (value1) > Resources > /ads (value2)`
 
-`availability_zone` - the availability zone requested for the DB and other resources and should match available subnets availability zones.
+`availability_zone` - the availability zone (AZ) requested for the DB and other resources and should match available subnets availability zones. For now we limit subnets to `us-west-2a` and `us-west-2b` AZs to avoid out of order detected public vs. private subnets which can result in unreachable targets groups for the Load Balancer. Please see [terraform template vpc.tf](https://github.com/unity-sds/unity-ads-deployment/blob/mliukis_issue113_cost_tags_attempt2/application_package/dockstore/common/vpc.tf).
 
 `lb_logs_bucket_name` - the name of manually created S3 bucket to store application's Load Balancer logs. 
 
