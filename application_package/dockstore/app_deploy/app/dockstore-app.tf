@@ -1,5 +1,9 @@
-resource "aws_cloudformation_stack" "dockstore_app" {
+locals {
   name = "awsAppDockstoreStack"
+}
+
+resource "aws_cloudformation_stack" "dockstore_app" {
+  name = local.name
 
   disable_rollback = true
 
@@ -19,6 +23,15 @@ resource "aws_cloudformation_stack" "dockstore_app" {
     UiVersion = "${var.uiversion}"
     GalaxyPluginVersion = "${var.galaxy_plugin_version}"
     ENIPrivateIP = "${var.eni_private_ip}"
+
+    # Tags to pass to the CloudFormation resources
+    ServiceArea = local.common_tags.ServiceArea
+    Proj = local.common_tags.Proj
+    Venue = local.common_tags.Venue
+    Component = local.common_tags.Component
+    CreatedBy = local.common_tags.CreatedBy
+    Env = local.common_tags.Env
+    Stack = local.common_tags.Stack
 
     #These inputs are AWS Session Manager Parameter Store paths
     AuthorizerType =  "/DeploymentConfig/${var.resource_prefix}/AuthorizerType"
@@ -59,6 +72,13 @@ resource "aws_cloudformation_stack" "dockstore_app" {
     ZenodoClientSecret = "/DeploymentConfig/${var.resource_prefix}/ZenodoClientSecret"
     ZenodoUrl = "/DeploymentConfig/${var.resource_prefix}/ZenodoUrl"
   }
+
+  tags = merge(
+    local.common_tags,
+    {
+      Name = local.name
+    }
+  )
 
   template_body = file("./dockstore-app.yml")
   capabilities = ["CAPABILITY_NAMED_IAM", "CAPABILITY_IAM"]

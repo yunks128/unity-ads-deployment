@@ -15,17 +15,15 @@ variable "api_id" {
   type        = string
 }
 
-
 variable "api_parent_id" {
   description = "The ID of the parent resource within the API to be updated"
   type        = string
 }
 
-
 variable "availability_zone" {
   description = "The availability zone for the RDS DB"
   type = string
-  default = "us-west-2d"
+  default = "us-west-2b"
 }
 
 variable "lb_logs_bucket_name" {

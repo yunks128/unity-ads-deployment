@@ -135,10 +135,11 @@ Parameters:
     Type: String
     AllowedValues:
       # Just a starting point; we could support all zones. And there is a better way to do this, see FN:GetAZs
+      # Allow for a and b zones for now - see common/vpc.tf for more details
       - us-west-2a
       - us-west-2b
-      - us-west-2c
-      - us-west-2d
+      # - us-west-2c
+      # - us-west-2d
     Default: us-west-2b
   InstanceType:
     Description: The EC2 instance type for Dockstore
@@ -167,6 +168,29 @@ Parameters:
     Description: The latest golden AMI to create EC2 with
     Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
     Default: /mcp/amis/ubuntu2004-cset
+
+  # Tags for allocated resources
+  ServiceArea:
+    Description: Which service area resource is related to?
+    Type: String
+  Proj:
+    Description: Unity Project
+    Type: String
+  Venue:
+    Description: Venue that the resource is being deployed on.
+    Type: String
+  Component:
+    Description: Unity component
+    Type: String
+  CreatedBy:
+    Description: Same as ServiceArea
+    Type: String
+  Env:
+    Description: Same as Venue
+    Type: String
+  Stack:
+    Description: Same as Component
+    Type: String
 
   #Unused params
   BdCatalystSevenBridgesImportUrl:
@@ -207,8 +231,6 @@ Parameters:
     Description: The external Google audience that Dockstore will accept tokens from
     Type: AWS::SSM::Parameter::Value<String>
     Default: /DeploymentConfig/dev/ExternalGoogleClientPrefix
-
-
 
   #Used
   #Here domain name is just URL - would be nice to eventually switch to domain names
@@ -405,6 +427,23 @@ Resources:
     Type: AWS::EC2::EIP
     Properties:
       Domain: vpc
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-eip'
+        - Key: ServiceArea
+          Value: !Ref ServiceArea
+        - Key: Proj
+          Value: !Ref Proj
+        - Key: Venue
+          Value: !Ref Venue
+        - Key: Component
+          Value: !Ref Component
+        - Key: CreatedBy
+          Value: !Ref CreatedBy
+        - Key: Env
+          Value: !Ref Env
+        - Key: Stack
+          Value: !Ref Stack
 
   DockstoreENI:
     Type: AWS::EC2::NetworkInterface
@@ -413,6 +452,23 @@ Resources:
       GroupSet:
       - !Ref DockstoreServerSecurityGroup
       PrivateIpAddress: !Ref ENIPrivateIP
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-eni'
+        - Key: ServiceArea
+          Value: !Ref ServiceArea
+        - Key: Proj
+          Value: !Ref Proj
+        - Key: Venue
+          Value: !Ref Venue
+        - Key: Component
+          Value: !Ref Component
+        - Key: CreatedBy
+          Value: !Ref CreatedBy
+        - Key: Env
+          Value: !Ref Env
+        - Key: Stack
+          Value: !Ref Stack
 
   DockstoreEIPAssociation:
     Type: AWS::EC2::EIPAssociation
@@ -932,10 +988,20 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub '${AWS::StackName}-instance'
-        - Key: Environment
-          Value: ''
-        - Key: Type
-          Value: "Dockstore"
+        - Key: ServiceArea
+          Value: !Ref ServiceArea
+        - Key: Proj
+          Value: !Ref Proj
+        - Key: Venue
+          Value: !Ref Venue
+        - Key: Component
+          Value: !Ref Component
+        - Key: CreatedBy
+          Value: !Ref CreatedBy
+        - Key: Env
+          Value: !Ref Env
+        - Key: Stack
+          Value: !Ref Stack
       UserData:
         Fn::Base64: !Sub |
           #!/bin/bash -xe
@@ -1038,8 +1104,20 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub '${AWS::StackName}-sg'
-        - Key: Environment
-          Value: !Ref ResourcePrefix
+        - Key: ServiceArea
+          Value: !Ref ServiceArea
+        - Key: Proj
+          Value: !Ref Proj
+        - Key: Venue
+          Value: !Ref Venue
+        - Key: Component
+          Value: !Ref Component
+        - Key: CreatedBy
+          Value: !Ref CreatedBy
+        - Key: Env
+          Value: !Ref Env
+        - Key: Stack
+          Value: !Ref Stack
 
   # Modify the RDS security group to add ingress rules allowing traffic from Dockstore instance SG
   DockstoreRdsSecurityGroupIngress:
@@ -1082,6 +1160,24 @@ Resources:
       Targets:
         - Id: !Ref DockstoreInstance
           Port: 80
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-tg-port80'
+        - Key: ServiceArea
+          Value: !Ref ServiceArea
+        - Key: Proj
+          Value: !Ref Proj
+        - Key: Venue
+          Value: !Ref Venue
+        - Key: Component
+          Value: !Ref Component
+        - Key: CreatedBy
+          Value: !Ref CreatedBy
+        - Key: Env
+          Value: !Ref Env
+        - Key: Stack
+          Value: !Ref Stack
+
 
   # Target group in front of the Dockstore instance, allows it to receive traffic from the load balancer via port 80
   TargetGroupPort8080:
@@ -1100,6 +1196,23 @@ Resources:
       Targets:
         - Id: !Ref DockstoreInstance
           Port: 8080
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-tg-port8080'
+        - Key: ServiceArea
+          Value: !Ref ServiceArea
+        - Key: Proj
+          Value: !Ref Proj
+        - Key: Venue
+          Value: !Ref Venue
+        - Key: Component
+          Value: !Ref Component
+        - Key: CreatedBy
+          Value: !Ref CreatedBy
+        - Key: Env
+          Value: !Ref Env
+        - Key: Stack
+          Value: !Ref Stack
 
 
   WebACLAssociation:

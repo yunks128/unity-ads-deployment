@@ -23,10 +23,11 @@ Parameters:
       # Just support us-east-1 and us-west-2
       #- us-east-1a
       #- us-east-1b
+      # Allow a and b AZs for now - see common/vpc.tf for more information
       - us-west-2a
       - us-west-2b
-      - us-west-2c
-      - us-west-2d
+      # - us-west-2c
+      # - us-west-2d
       #- us-east-2a
       #- us-east-2b
     Default: us-west-2b
@@ -75,13 +76,37 @@ Parameters:
   EngineVersion:
     Description: 'PostgreSQL version.'
     Type: String
-    Default: '13.3'
+    # Default: '13.3'
+    Default: '13.7'
     #aws rds describe-db-engine-versions --engine postgres --query "DBEngineVersions[].EngineVersion"
   EnableIAMDatabaseAuthentication:
     Description: 'Enable mapping of AWS Identity and Access Management (IAM) accounts to database accounts (https://docs.aws.amazon.com/AmazonRDS/ladev/AuroraUserGuide/UsingWithRDS.IAMDBAuth.html).'
     Type: String
     AllowedValues: ['true', 'false']
     Default: 'false'
+
+  # Tags for allocated resources
+  ServiceArea:
+    Description: Which service area resource is related to?
+    Type: String
+  Proj:
+    Description: Unity Project
+    Type: String
+  Venue:
+    Description: Venue that the resource is being deployed on.
+    Type: String
+  Component:
+    Description: Unity component
+    Type: String
+  CreatedBy:
+    Description: Same as ServiceArea
+    Type: String
+  Env:
+    Description: Same as Venue
+    Type: String
+  Stack:
+    Description: Same as Component
+    Type: String
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -127,8 +152,20 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub '${AWS::StackName}-rds-subnet'
-        - Key: Environment
-          Value: !Ref ResourcePrefix
+        - Key: ServiceArea
+          Value: !Ref ServiceArea
+        - Key: Proj
+          Value: !Ref Proj
+        - Key: Venue
+          Value: !Ref Venue
+        - Key: Component
+          Value: !Ref Component
+        - Key: CreatedBy
+          Value: !Ref CreatedBy
+        - Key: Env
+          Value: !Ref Env
+        - Key: Stack
+          Value: !Ref Stack
 
   DBInstance:
     DeletionPolicy: Snapshot # default
@@ -185,8 +222,20 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub '${AWS::StackName}-rds-db-instance'
-        - Key: Environment
-          Value: !Ref ResourcePrefix
+        - Key: ServiceArea
+          Value: !Ref ServiceArea
+        - Key: Proj
+          Value: !Ref Proj
+        - Key: Venue
+          Value: !Ref Venue
+        - Key: Component
+          Value: !Ref Component
+        - Key: CreatedBy
+          Value: !Ref CreatedBy
+        - Key: Env
+          Value: !Ref Env
+        - Key: Stack
+          Value: !Ref Stack
 
   DBSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -207,8 +256,20 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub '${AWS::StackName}-rds-db-sg'
-        - Key: Environment
-          Value: !Ref ResourcePrefix
+        - Key: ServiceArea
+          Value: !Ref ServiceArea
+        - Key: Proj
+          Value: !Ref Proj
+        - Key: Venue
+          Value: !Ref Venue
+        - Key: Component
+          Value: !Ref Component
+        - Key: CreatedBy
+          Value: !Ref CreatedBy
+        - Key: Env
+          Value: !Ref Env
+        - Key: Stack
+          Value: !Ref Stack
 
 Outputs:
   DBSecurityGroup:
