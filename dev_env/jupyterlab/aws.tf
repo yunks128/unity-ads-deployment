@@ -1,1 +1,1 @@
-../common/aws.tf
+../../common/aws.tf

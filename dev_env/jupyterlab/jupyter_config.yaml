@@ -196,9 +196,9 @@ hub:
       client_secret: ${oauth_client_secret}
     UnityOAuthenticator:
       username_key: username
-      authorize_url: ${cognito_base_url}/oauth2/authorize
-      token_url: ${cognito_base_url}/oauth2/token
-      userdata_url: ${cognito_base_url}/oauth2/userInfo
+      authorize_url: ${cognito_oauth_base_url}/oauth2/authorize
+      token_url: ${cognito_oauth_base_url}/oauth2/token
+      userdata_url: ${cognito_oauth_base_url}/oauth2/userInfo
     JupyterHub:
       authenticator_class: UnityOAuthenticator
 proxy:
