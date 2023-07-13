@@ -22,6 +22,16 @@
 # docker-in-docker.  Please, see
 #   https://cm-gitlab.stanford.edu/help/ci/docker/using_docker_build.md
 
+# The cloud-init output log is saved to
+#   /var/log/cloud-init-output.log.
+# User data script is copied to and run from
+#   /var/lib/cloud/instances/<instance-id>/
+
+
+#---------- Who am I creating the environment? ----------#
+
+echo "The account used to set up the environment is `whoami`."
+
 
 #---------- for yum based installations ----------#
 
@@ -44,7 +54,7 @@ sudo yum update -y
 #   Group information  >  Members
 # There, you can check your "Max role", which should be "owner".
 #
-# To get the service install/start instructions first (starting from top
+# To get the service install/start instructions, first (starting from top
 # menu bar) go to
 #   Main menu  >  Groups  >  Your groups  >  Unity
 # second (starting from left side-bar) go to
@@ -114,28 +124,61 @@ sudo /usr/local/bin/gitlab-runner register \
 sudo yum install -y git
 
 
+#---------- install mini-conda ----------#
+
+# Most AMIs don't have the needed versions of Python.  Mini-conda will
+# let us use the desired version of the Python.
+
+sudo curl -sSL https://repo.anaconda.com/miniconda/Miniconda3-py310_23.3.1-0-Linux-x86_64.sh -o /tmp/install_miniconda.sh
+sudo chmod 755 /tmp/install_miniconda.sh
+sudo bash /tmp/install_miniconda.sh -b -p /usr/local -u
+
+
 #---------- install docker ----------#
 
 # Here, docker is primarily installed because gitlab-runner will need it to
 # run the docker executor when needed.
 
+sudo yum install -y docker
+
 # This may only work with Amazon Linux based AMIs.
 #
-sudo amazon-linux-extras install docker
-sudo service docker start
-sudo usermod -a -G docker ec2-user
+#sudo amazon-linux-extras install docker
+#sudo service docker start
+#sudo usermod -a -G docker ec2-user
 
 # Add gitlab-runner user to docker group.
 #
-sudo usermod -a -G docker gitlab-runner
+#sudo usermod -a -G docker gitlab-runner
+
+
+#---------- install unity-app-generator ----------#
+
+# Currently, Python version 3.9 or above is needed for unity-app-generator.
+
+# IMPORTANT NOTE:  The account used to execute the commands in this script
+# is the root account; therefore, one may assume that there should be no
+# need for "sudo" before the commands.  However, this is not the case.  To
+# set up the environment as expected, some "sudo"s are necessary, and some
+# commands must not be preceded with "sudo"s.  For example, for the
+# following "pip3 install ..." command to work successfully, sudo must be
+# used before some of the preceding commands (not sure which ones), but
+# there must be no sudo before the "pip3 install ..." command itself.
+
+cd /home/gitlab-runner
+su gitlab-runner -c "git clone https://github.com/unity-sds/unity-app-generator.git"
+pip3 install -r unity-app-generator/requirements.txt
 
 
 #---------- install aws cli ----------#
 
-#cd
-#curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-#unzip awscliv2.zip
-#sudo ./aws/install
+# Amazon Linux AMIs are pre-installed with aws cli, and
+# this code block is not necessary with Amazon Linux.
+
+cd /home/gitlab-runner
+su gitlab-runner -c 'curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"'
+su gitlab-runner -c "unzip awscliv2.zip"
+sudo ./aws/install
 
 
 #---------- aws instance cleanup ----------#

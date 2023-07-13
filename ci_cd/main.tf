@@ -7,6 +7,10 @@
 #   % terraform show          (optional)
 #   % terraform state list    (optional)
 #   % terraform destroy       (when you don't need the services any longer)
+#
+# This script has the following variable(s) with no default value(s), hence
+# value(s) must be provided for the variable(s) when running terraform:
+#   - gl_runner_registration_token:  gitLab registration token for the runner(s)
 
 
 # Select the provider(s)
@@ -29,6 +33,11 @@ terraform {
 #
 provider "aws" {
   region = "us-west-2"
+  default_tags {
+    tags = {
+      U-ADS   = "dev_env"
+    }
+  }
 }
 
 
@@ -42,6 +51,7 @@ provider "aws" {
 variable "gl_runner_machine_name" {
   description = "Name of the machine to be used for GitLab runner"
   type        = string
+#  default     = "MCP RHEL 8 CSET 20*"
   default     = "MCP Amazon Linux 2 20*"
 }
 
