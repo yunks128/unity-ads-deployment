@@ -61,7 +61,6 @@ Parameters:
   ResourcePrefix:
     Description: Env prefix (dev or test)
     Type: String
-    Default: 'dev'
   ENIPrivateIP:
     Description: Private IP for ENI
     Type: String
@@ -133,14 +132,14 @@ Parameters:
   AvailabilityZone:
     Description: The AWS availability zone, e.g, us-east-1a
     Type: String
-    AllowedValues:
-      # Just a starting point; we could support all zones. And there is a better way to do this, see FN:GetAZs
-      # Allow for a and b zones for now - see common/vpc.tf for more details
-      - us-west-2a
-      - us-west-2b
-      # - us-west-2c
-      # - us-west-2d
-    Default: us-west-2b
+    # AllowedValues:
+    #   # Just a starting point; we could support all zones. And there is a better way to do this, see FN:GetAZs
+    #   # Allow for a and b zones for now - see common/vpc.tf for more details
+    #   - us-west-2a
+    #   - us-west-2b
+    #   - us-west-2c
+    #   - us-west-2d
+    # Default: us-west-2b
   InstanceType:
     Description: The EC2 instance type for Dockstore
     Type: String
@@ -163,7 +162,6 @@ Parameters:
   AuthorizerType:
     Description: The authorizer Dockstore should use -- inmemory, sam, or none
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/AuthorizerType
   LatestAMI:
     Description: The latest golden AMI to create EC2 with
     Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
@@ -196,162 +194,126 @@ Parameters:
   BdCatalystSevenBridgesImportUrl:
     Description: The import url for the Seven Bridges instance of BD Catalyst
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/BdCatalystSevenBridgesImportUrl
   BdCatalystTerraImportUrl:
     Description: The import url for the Terra instance of BD Catalyst
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/BdCatalystTerraImportUrl
   BitbucketClientId:
     Description: The Bitbucket client id
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/BitbucketClientId
   BitbucketClientSecret:
     Description: The Bitbucket client secret
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/BitbucketClientSecret
     NoEcho: true
   DiscourseCategoryId:
     Description: The Discourse category id
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/DiscourseCategoryId
   DiscourseKey:
     Description: The Discourse key
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/DiscourseKey
     NoEcho: true
   DiscourseUrl:
     Description: The Discourse url
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/DiscourseUrl
   DocumentationUrl:
     Description: The documentation  url
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/DocumentationUrl
   ExternalGoogleClientPrefix:
     Description: The external Google audience that Dockstore will accept tokens from
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/ExternalGoogleClientPrefix
 
   #Used
   #Here domain name is just URL - would be nice to eventually switch to domain names
   DomainName:
     Description: The domain of this Dockstore instance, e.g., dockstore.org, staging.dockstore.org, .dockstore.net
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/DomainName
   FeaturedContentUrl:
     Description: The CloudFront content to populate the featured collection and organization
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/FeaturedContentURL
   FeaturedNewsUrl:
     Description: The CloudFront content to populate news and events
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/FeaturedNewsURL
   GitHubAppId:
     Description: The GitHub App id
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/GitHubAppId
   GitHubAppName:
     Description: The GitHub App name
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/GitHubAppName
   GitHubClientId:
     Description: The GitHub Client id
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/GitHubClientId
   GitHubClientSecret:
     Description: The GitHub Client secret
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/GitHubClientSecret
     NoEcho: true
   DBDockstoreUserPassword:
     Description: The password for the Postgres dockstore user
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/DBDockstorePassword
     NoEcho: true
   DBPostgresPassword:
     Description: The Postgres user password
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/DBPostgresPassword
     NoEcho: true
 
   #Unused params
   GitLabClientId:
     Description: The GitLab Client id
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/GitLabClientId
   GitLabClientSecret:
     Description: The GitLab Client secret
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/GitLabClientSecret
     NoEcho: true
   GoogleClientId:
     Description: The Google Client secret
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/GoogleClientId
   GoogleClientSecret:
     Description: The Google Client secret
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/GoogleClientSecret
     NoEcho: true
   OrcidClientId:
     Description: The ORCID client id
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/OrcidClientId
   OrcidClientSecret:
     Description: The ORCID client secret
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/OrcidClientSecret
     NoEcho: true
   OrcidUrl:
     Description: The ORCID url
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/OrcidUrl
   OrcidScope:
     Description: The ORCID scope
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/OrcidScope
   QuayClientId:
     Description: The Quay Client id
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/QuayClientId
   QuayClientSecret:
     Description: The Quay Client secret
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/QuayClientSecret
     NoEcho: true
   SamPath:
     Description: SAM base path
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/SamPath
   SlackMediumPrioritySNSTopicName:
     Description: Name of Amazon SNS Topic for sending medium priority alerts to a slack channel
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/SlackMediumPrioritySNSTopicName
   TagManagerId:
     Description: The Google Tag Manager id
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/TagManagerId
   TerraImportUrl:
     Description: The Terra Import Url
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/TerraImportUrl
   ToolTesterBucketName:
     Description: The Tool Tester bucket name
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/ToolTesterBucketName
   ZenodoClientId:
     Description: The Zenodo Client id
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/ZenodoClientId
   ZenodoClientSecret:
     Description: The Zenodo Client secret
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/ZenodoClientSecret
   #  NoEcho: true
   ZenodoUrl:
     Description: The Zenodo url
     Type: AWS::SSM::Parameter::Value<String>
-    Default: /DeploymentConfig/dev/ZenodoUrl
 
 #System Level Parameters from Parameter Store
 #  CertificateArn:
