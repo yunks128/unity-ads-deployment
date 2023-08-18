@@ -2,7 +2,7 @@ locals {
   name = "awsLBDockstoreStack"
 }
 
-resource "aws_cloudformation_stack" "dev" {
+resource "aws_cloudformation_stack" "env_resource" {
   name = local.name
 
   parameters = {
