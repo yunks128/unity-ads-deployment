@@ -126,6 +126,8 @@ sudo curl -sSL https://repo.anaconda.com/miniconda/Miniconda3-py310_23.3.1-0-Lin
 sudo chmod 755 /tmp/install_miniconda.sh
 sudo bash /tmp/install_miniconda.sh -b -p /usr/local -u
 
+pip3 install notebook
+
 
 #---------- install docker ----------#
 
@@ -167,8 +169,10 @@ sudo usermod -a -G docker gitlab-runner
 # there must be no sudo before the "pip3 install ..." command itself.
 
 cd /home/gitlab-runner
+su gitlab-runner -c "git clone https://github.com/unity-sds/app-pack-generator.git"
+pip3 install app-pack-generator/
 su gitlab-runner -c "git clone https://github.com/unity-sds/unity-app-generator.git"
-pip3 install -r unity-app-generator/requirements.txt
+pip3 install unity-app-generator/
 
 
 #---------- install aws cli ----------#
