@@ -65,6 +65,20 @@ This guide provides instructions on how to setup an environment for using these 
 ](https://docs.aws.amazon.com/eks/latest/userguide/getting-started.html) instructions.
 
 When checking out this repository keep a separate copy for each deployment instance (ie. development, test, production). This will simplify management and keep their Terraform state files seperated.
+
+## Changelog
+
+See our [CHANGELOG.md](CHANGELOG.md) for a history of our changes.
+
+See our [releases page](https://github.com/unity-sds/unity-ads-deployment/releases) for our key versioned releases.
+
+## Frequently Asked Questions (FAQ)
+
+Questions about our project? Please see our: [FAQ](https://unity-sds.gitbook.io/docs/developer-docs/algorithm-development/faq)
+
+## Contributing
+
+Interested in contributing to our project? Please see our: [CONTRIBUTING.md](CONTRIBUTING.md)
   
 ## License
 
