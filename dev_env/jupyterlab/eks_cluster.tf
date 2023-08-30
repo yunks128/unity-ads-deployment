@@ -21,10 +21,12 @@ resource "aws_eks_node_group" "jupyter_cluster_node_group" {
   subnet_ids      = data.aws_subnets.unity_public_subnets.ids
 
   scaling_config {
-    desired_size = 2
-    max_size     = 2
+    desired_size = 4
+    max_size     = 8
     min_size     = 2
   }
+
+  disk_size = 100
 
   update_config {
     max_unavailable = 2
