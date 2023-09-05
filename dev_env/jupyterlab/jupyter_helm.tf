@@ -3,7 +3,7 @@ resource "helm_release" "jupyter_helm" {
   repository = "https://jupyterhub.github.io/helm-chart"
   chart      = "jupyterhub"
   namespace  = "jhub-${var.tenant_identifier}"
-  version    = "1.2.0"
+  version    = "3.0.3"
 
   cleanup_on_fail  = true
   create_namespace = true
