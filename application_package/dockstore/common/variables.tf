@@ -18,8 +18,13 @@ variable "api_parent_id" {
   type        = string
 }
 
-variable "availability_zone" {
-  description = "The availability zone for the RDS DB"
+variable "availability_zone_1" {
+  description = "The availability zone for the deployment's RDS DB, and as first AZ for the application's LB"
+  type        = string
+}
+
+variable "availability_zone_2" {
+  description = "Second availability zone for the deployment's application LB"
   type        = string
 }
 

@@ -8,8 +8,11 @@ resource "aws_cloudformation_stack" "env_resource" {
   parameters = {
     ResourcePrefix = "${var.resource_prefix}"
     VpcId = data.aws_vpc.unity_vpc.id
-    SubnetId1 = tolist(data.aws_subnets.unity_public_subnets.ids)[0]
-    SubnetId2 = tolist(data.aws_subnets.unity_public_subnets.ids)[1]
+    /* SubnetId1 = tolist(data.aws_subnets.unity_public_subnets.ids)[0]
+    SubnetId2 = tolist(data.aws_subnets.unity_public_subnets.ids)[1] */
+    SubnetId1 = local.unity_subnets["${var.availability_zone_1}"].public
+    SubnetId2 = local.unity_subnets["${var.availability_zone_2}"].public
+
     S3Stack = "awsS3DockstoreStack"
     LBLogsS3BucketName = "${var.lb_logs_bucket_name}"
     LBLogsS3BucketPrefix = "${var.lb_logs_bucket_prefix}"

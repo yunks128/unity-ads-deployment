@@ -10,9 +10,13 @@ resource "aws_cloudformation_stack" "db" {
     DBMasterUserPassword  = "/DeploymentConfig/${var.resource_prefix}/DBPostgresPassword"
     DBSnapshot = "${var.db_snapshot}"
     VpcId = data.aws_vpc.unity_vpc.id
-    SubnetId1 = tolist(data.aws_subnets.unity_public_subnets.ids)[0]
-    SubnetId2 = tolist(data.aws_subnets.unity_public_subnets.ids)[1]
-    AvailabilityZone = "${var.availability_zone}"
+    /* SubnetId1 = tolist(data.aws_subnets.unity_public_subnets.ids)[0]
+    SubnetId2 = tolist(data.aws_subnets.unity_public_subnets.ids)[1] */
+
+    SubnetId1 = local.unity_subnets["${var.availability_zone_1}"].public
+    SubnetId2 = local.unity_subnets["${var.availability_zone_2}"].public
+
+    AvailabilityZone = "${var.availability_zone_1}"
 
     # Tags to pass to the CloudFormation resources
     ServiceArea = local.common_tags.ServiceArea
