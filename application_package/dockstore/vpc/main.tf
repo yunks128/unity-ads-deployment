@@ -1,5 +1,10 @@
 locals {
   unity_instance = "${var.unity_instance}"
+  resource_prefix = "${var.resource_prefix}"
+  api_id = "${var.api_id}"
+  api_parent_id = "${var.api_parent_id}"
+  availability_zone_1 = "${var.availability_zone_1}"
+  availability_zone_2 = "${var.availability_zone_2}"
 }
 
 data "aws_vpc" "unity_vpc" {
