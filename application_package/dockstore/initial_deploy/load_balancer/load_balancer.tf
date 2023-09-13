@@ -2,10 +2,6 @@ locals {
   name = "awsLBDockstoreStack"
 }
 
-variable "unity_subnets" {
-  description = "Subnets from the VPC module"
-}
-
 resource "aws_cloudformation_stack" "env_resource" {
   name = local.name
 
