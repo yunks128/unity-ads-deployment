@@ -1,5 +1,6 @@
 module "vpc" {
     source = "../vpc/"
+    unity_instance = "${var.unity_instance}"
 }
 
 module "iam" {
