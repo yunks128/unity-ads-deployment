@@ -1,7 +1,11 @@
+locals {
+  unity_instance = "${var.unity_instance}"
+}
+
 data "aws_vpc" "unity_vpc" {
   filter {
     name   = "tag:Name"
-    values = [ "${var.unity_instance}-VPC" ]
+    values = [ "${local.unity_instance}-VPC" ]
   }
 }
 
@@ -29,6 +33,7 @@ data "aws_vpcs" "existing_vpcs" {}
 locals {
   azs = toset(["us-west-2a", "us-west-2b", "us-west-2c", "us-west-2d"])
 }
+
 
 data "aws_subnets" "public" {
   filter {
