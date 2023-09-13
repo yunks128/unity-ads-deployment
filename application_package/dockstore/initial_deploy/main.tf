@@ -1,3 +1,7 @@
+module "vpc" {
+    source = "../vpc/"
+}
+
 module "iam" {
     source = "./iam"
     unity_instance = "${var.unity_instance}"
@@ -46,9 +50,17 @@ module "load_balancer" {
     lb_logs_bucket_prefix = "${var.lb_logs_bucket_prefix}"
     availability_zone_1 = "${var.availability_zone_1}"
     availability_zone_2 = "${var.availability_zone_2}"
+    unity_subnets = module.vpc.unity_subnets
+    /* subnet_id1 = "${lookup(module.vpc.unity_subnets, var.availability_zone_1).public}" */
+    /* subnet_id2 = "${lookup(module.vpc.unity_subnets, var.availability_zone_2).public}" */
+
+    subnet_id1 = unity_subnets[var.availability_zone_1].public
+    subnet_id2 = unity_subnets[var.availability_zone_2].public
+    /* subnet_id1 = "${var.unity_subnets}["${var.availability_zone_1}"].public" */
 
     depends_on = [
-        module.s3
+        module.s3,
+        module.vpc
     ]
 }
 

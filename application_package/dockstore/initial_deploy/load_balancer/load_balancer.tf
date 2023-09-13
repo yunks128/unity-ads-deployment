@@ -2,6 +2,10 @@ locals {
   name = "awsLBDockstoreStack"
 }
 
+variable "unity_subnets" {
+  description = "Subnets from the VPC module"
+}
+
 resource "aws_cloudformation_stack" "env_resource" {
   name = local.name
 
@@ -10,8 +14,8 @@ resource "aws_cloudformation_stack" "env_resource" {
     VpcId = data.aws_vpc.unity_vpc.id
     /* SubnetId1 = tolist(data.aws_subnets.unity_public_subnets.ids)[0]
     SubnetId2 = tolist(data.aws_subnets.unity_public_subnets.ids)[1] */
-    SubnetId1 = local.unity_subnets["${var.availability_zone_1}"].public
-    SubnetId2 = local.unity_subnets["${var.availability_zone_2}"].public
+    SubnetId1 = "${var.subnet_id1}"
+    SubnetId2 = "${var.subnet_id2}"
 
     S3Stack = "awsS3DockstoreStack"
     LBLogsS3BucketName = "${var.lb_logs_bucket_name}"

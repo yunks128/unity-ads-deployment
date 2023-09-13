@@ -93,5 +93,5 @@ locals {
 # Subnets per AZ as provided in
 output "unity_subnets" {
   value       = local.az_subnet_ids
-  description = "Map of the AZ to the corresponding 'public' and 'private' subnet"
+  description = "Mapping of the AZ to the corresponding 'public' and 'private' subnet"
 }
