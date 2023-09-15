@@ -55,7 +55,7 @@ Parameters:
   VpcId:
     Description: VPC ID for desired VPC
     Type: String
-  SubnetId:
+  PrivateSubnetId:
     Description: Subnet ID for desired VPC
     Type: String
   ResourcePrefix:
@@ -410,7 +410,7 @@ Resources:
   DockstoreENI:
     Type: AWS::EC2::NetworkInterface
     Properties:
-      SubnetId: !Ref SubnetId
+      SubnetId: !Ref PrivateSubnetId
       GroupSet:
       - !Ref DockstoreServerSecurityGroup
       PrivateIpAddress: !Ref ENIPrivateIP
@@ -942,7 +942,7 @@ Resources:
       # These are in conflict with newly introduced ENI resource DockstoreENI, just move the group to ENI definition
       # SecurityGroupIds:
       #   - !Ref DockstoreServerSecurityGroup
-      # SubnetId: !Ref SubnetId
+      # SubnetId: !Ref PrivateSubnetId
       NetworkInterfaces:
         - NetworkInterfaceId: !Ref DockstoreENI
           DeviceIndex: '0'
