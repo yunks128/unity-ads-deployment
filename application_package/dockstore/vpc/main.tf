@@ -1,16 +1,13 @@
-locals {
-  unity_instance = "${var.unity_instance}"
-  resource_prefix = "${var.resource_prefix}"
-  api_id = "${var.api_id}"
-  api_parent_id = "${var.api_parent_id}"
+/* locals {
+  #unity_instance = "${var.unity_instance}"
   availability_zone_1 = "${var.availability_zone_1}"
   availability_zone_2 = "${var.availability_zone_2}"
-}
+} */
 
 data "aws_vpc" "unity_vpc" {
   filter {
     name   = "tag:Name"
-    values = [ "${local.unity_instance}-VPC" ]
+    values = [ "${var.unity_instance}-VPC" ]
   }
 }
 
@@ -100,8 +97,30 @@ locals {
   }
 }
 
-# Subnets per AZ as provided in
-output "unity_subnets" {
+# Map of private and public subnets per AZ if all subnets to be used by other modules
+/* output "unity_subnets" {
   value       = local.az_subnet_ids
+  type        = map(string)
   description = "Mapping of the AZ to the corresponding 'public' and 'private' subnet"
+} */
+
+# Output private and public subnets for two AZs the deployment is using
+output "private_subnet1" {
+  value = local.az_subnet_ids[var.availability_zone_1].private[0]
+}
+
+output "private_subnet2" {
+  value = local.az_subnet_ids[var.availability_zone_2].private[0]
+}
+
+output "public_subnet1" {
+  value = local.az_subnet_ids[var.availability_zone_1].public[0]
+}
+
+output "public_subnet2" {
+  value = local.az_subnet_ids[var.availability_zone_2].public[0]
+}
+
+output "unity_vpc" {
+  value = data.aws_vpc.unity_vpc.id
 }

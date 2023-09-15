@@ -9,12 +9,11 @@ resource "aws_cloudformation_stack" "db" {
     DBName = "${var.resource_prefix}"
     DBMasterUserPassword  = "/DeploymentConfig/${var.resource_prefix}/DBPostgresPassword"
     DBSnapshot = "${var.db_snapshot}"
-    VpcId = data.aws_vpc.unity_vpc.id
+    VpcId = "${var.unity_vpc}"
     /* SubnetId1 = tolist(data.aws_subnets.unity_public_subnets.ids)[0]
     SubnetId2 = tolist(data.aws_subnets.unity_public_subnets.ids)[1] */
-
-    SubnetId1 = local.unity_subnets["${var.availability_zone_1}"].public
-    SubnetId2 = local.unity_subnets["${var.availability_zone_2}"].public
+    SubnetId1 = "${var.subnet_id1}"
+    SubnetId2 = "${var.subnet_id2}"
 
     AvailabilityZone = "${var.availability_zone_1}"
 

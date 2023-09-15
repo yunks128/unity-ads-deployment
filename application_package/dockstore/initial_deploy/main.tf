@@ -1,26 +1,24 @@
 module "vpc" {
     source = "../vpc/"
     unity_instance = "${var.unity_instance}"
+    availability_zone_1 = "${var.availability_zone_1}"
+    availability_zone_2 = "${var.availability_zone_2}"
+    resource_prefix = "${var.resource_prefix}"
+
+    /* Module outputs:
+    unity_vpc = module.vpc.unity_vpc
+    subnet_id1 = module.vpc.public_subnet1
+    subnet_id2 = module.vpc.public_subnet2 */
 }
 
 module "iam" {
     source = "./iam"
-    unity_instance = "${var.unity_instance}"
     resource_prefix = "${var.resource_prefix}"
-    api_id = "${var.api_id}"
-    api_parent_id = "${var.api_parent_id}"
-    availability_zone_1 = "${var.availability_zone_1}"
-    availability_zone_2 = "${var.availability_zone_2}"
 }
 
 module "log-group" {
     source = "./log-group"
-    unity_instance = "${var.unity_instance}"
     resource_prefix = "${var.resource_prefix}"
-    api_id = "${var.api_id}"
-    api_parent_id = "${var.api_parent_id}"
-    availability_zone_1 = "${var.availability_zone_1}"
-    availability_zone_2 = "${var.availability_zone_2}"
 
     depends_on = [
         module.iam
@@ -29,12 +27,7 @@ module "log-group" {
 
 module "s3" {
     source = "./s3"
-    unity_instance = "${var.unity_instance}"
     resource_prefix = "${var.resource_prefix}"
-    availability_zone_1 = "${var.availability_zone_1}"
-    availability_zone_2 = "${var.availability_zone_2}"
-    api_id = "${var.api_id}"
-    api_parent_id = "${var.api_parent_id}"
 
     depends_on = [
         module.log-group
@@ -43,21 +36,14 @@ module "s3" {
 
 module "load_balancer" {
     source = "./load_balancer"
-    unity_instance = "${var.unity_instance}"
     resource_prefix = "${var.resource_prefix}"
-    api_id = "${var.api_id}"
-    api_parent_id = "${var.api_parent_id}"
     lb_logs_bucket_name = "${var.lb_logs_bucket_name}"
     lb_logs_bucket_prefix = "${var.lb_logs_bucket_prefix}"
     availability_zone_1 = "${var.availability_zone_1}"
     availability_zone_2 = "${var.availability_zone_2}"
-    unity_subnets = module.vpc.unity_subnets
-    /* subnet_id1 = "${lookup(module.vpc.unity_subnets, var.availability_zone_1).public}" */
-    /* subnet_id2 = "${lookup(module.vpc.unity_subnets, var.availability_zone_2).public}" */
-
-    subnet_id1 = unity_subnets[var.availability_zone_1].public
-    subnet_id2 = unity_subnets[var.availability_zone_2].public
-    /* subnet_id1 = "${var.unity_subnets}["${var.availability_zone_1}"].public" */
+    unity_vpc = module.vpc.unity_vpc
+    subnet_id1 = module.vpc.public_subnet1
+    subnet_id2 = module.vpc.public_subnet2
 
     depends_on = [
         module.s3,
@@ -67,12 +53,9 @@ module "load_balancer" {
 
 module "core" {
     source = "./core"
-    unity_instance = "${var.unity_instance}"
     resource_prefix = "${var.resource_prefix}"
     api_id = "${var.api_id}"
     api_parent_id = "${var.api_parent_id}"
-    availability_zone_1 = "${var.availability_zone_1}"
-    availability_zone_2 = "${var.availability_zone_2}"
 
     depends_on = [
         module.load_balancer
@@ -81,13 +64,12 @@ module "core" {
 
 module "database" {
     source = "./database"
-    unity_instance = "${var.unity_instance}"
+    unity_vpc = module.vpc.unity_vpc
+    subnet_id1 = module.vpc.public_subnet1
+    subnet_id2 = module.vpc.public_subnet2
     resource_prefix = "${var.resource_prefix}"
-    api_id = "${var.api_id}"
-    api_parent_id = "${var.api_parent_id}"
     db_snapshot = "${var.db_snapshot}"
     availability_zone_1 = "${var.availability_zone_1}"
-    availability_zone_2 = "${var.availability_zone_2}"
 
     depends_on = [
         module.core
@@ -96,12 +78,7 @@ module "database" {
 
 module "es-log-groups" {
     source = "./es-log-groups"
-    unity_instance = "${var.unity_instance}"
     resource_prefix = "${var.resource_prefix}"
-    api_id = "${var.api_id}"
-    api_parent_id = "${var.api_parent_id}"
-    availability_zone_1 = "${var.availability_zone_1}"
-    availability_zone_2 = "${var.availability_zone_2}"
 
     depends_on = [
         module.database
@@ -110,12 +87,9 @@ module "es-log-groups" {
 
 module "elasticsearch" {
     source = "./elasticsearch"
-    unity_instance = "${var.unity_instance}"
     resource_prefix = "${var.resource_prefix}"
-    api_id = "${var.api_id}"
-    api_parent_id = "${var.api_parent_id}"
-    availability_zone_1 = "${var.availability_zone_1}"
-    availability_zone_2 = "${var.availability_zone_2}"
+    unity_vpc = module.vpc.unity_vpc
+    private_subnet_id1 = module.vpc.private_subnet1
 
     depends_on = [
         module.es-log-groups
