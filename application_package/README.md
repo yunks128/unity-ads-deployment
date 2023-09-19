@@ -143,7 +143,7 @@ The initial deployment consists of many AWS resources required prior to deployin
 The Dockstore application is installed within an EC2 instance and this step handles standing it up. 
 
 A private IP address needs to be selected for the ENI association to the EIP of the EC2 instance we are about to create. Please follow these steps in to identify available private IP addresses within private subnet that corresponds to the Availability Zone (AZ) for the deployment (as specified by `TF_VAR_availability_zone` environment variable):
-1. Access Subnets through `AWS Console: VPC -> VPCs`, select Unity-Dev-VPC, select `Unity-Dev-Priv-SubnetXX` tab and get an ID of the subnet for the AZ of the deployment `subnet-xxxxx`
+1. Access Subnets through `AWS Console: VPC -> VPCs`, select Unity-Dev-VPC, select `Unity-Dev-Priv-SubnetXX` tab and get an ID of the subnet for the AZ #1 of the deployment `subnet-xxxxx`
 2. Set temporary AWS access keys using `MCP Tenant Systems Administrator` role in Kion
 3. Run command, which will display all private IPs in use:
    ```aws ec2 describe-network-interfaces --filters Name=subnet-id,Values=subnet-xxxxx | grep 'PrivateIpAddress":' | grep -v ','| sort```
