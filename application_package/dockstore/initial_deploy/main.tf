@@ -4,11 +4,6 @@ module "vpc" {
     availability_zone_1 = "${var.availability_zone_1}"
     availability_zone_2 = "${var.availability_zone_2}"
     resource_prefix = "${var.resource_prefix}"
-
-    /* Module outputs:
-    unity_vpc = module.vpc.unity_vpc
-    subnet_id1 = module.vpc.public_subnet1
-    subnet_id2 = module.vpc.public_subnet2 */
 }
 
 module "iam" {

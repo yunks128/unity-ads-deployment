@@ -13,6 +13,11 @@ variable "availability_zone_1" {
   type        = string
 }
 
+variable "availability_zone_2" {
+  description = "Second availability zone for the deployment's application LB"
+  type        = string
+}
+
 variable "auto_update" {
   description = " Whether the webservice and UI should update themselves nightly."
   type    = bool
