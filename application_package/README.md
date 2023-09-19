@@ -72,7 +72,8 @@ export TF_VAR_unity_instance="Unity-Dev"
 export TF_VAR_resource_prefix=dev
 export TF_VAR_api_id=value1
 export TF_VAR_api_parent_id=value2
-export TF_VAR_availability_zone=us-west-2b
+export TF_VAR_availability_zone_1=us-west-2c
+export TF_VAR_availability_zone_2=us-west-2b
 
 # Default settings which can be changed through these environment variables
 export TF_VAR_lb_logs_bucket_name="uads-dev-dockstore-elb-logs"
@@ -101,7 +102,7 @@ Where:
 
 Note: Both ID values are accessible through `AWS Console: API Gateway -> Unity API Gateway` where upper toolbar lists the ID values: `APIs > Unity API Gateway (value1) > Resources > /ads (value2)`
 
-`availability_zone` - the availability zone (AZ) requested for the DB and other resources and should match available subnets availability zones. For now we limit subnets to `us-west-2a` and `us-west-2b` AZs to avoid out of order detected public vs. private subnets which can result in unreachable targets groups for the Load Balancer. Please see [terraform template vpc.tf](https://github.com/unity-sds/unity-ads-deployment/blob/mliukis_issue113_cost_tags_attempt2/application_package/dockstore/common/vpc.tf).
+`availability_zone_1` and `availability_zone_2` - the availability zones (AZ) requested for the DB, ES and other resources. For now we limit AZs to `us-west-2c` and `us-west-2b` for the `development` environment and to `us-west-2a` and `us-west-2c` for the `test` environment. Some of the AZ's don't have enough free IP addresses and should not be selected for the Dockstore deployment. 
 
 `lb_logs_bucket_name` - the name of manually created S3 bucket to store application's Load Balancer logs. 
 
