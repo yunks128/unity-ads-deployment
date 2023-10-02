@@ -1,4 +1,22 @@
+variable "unity_instance" {
+  description = "Name of the Unity instance where deploying"
+  type        = string
+}
 
+variable "resource_prefix" {
+  description = "String used at the beginning of the names for all resources to identify them according to the UADS subsystem"
+  type        = string
+}
+
+variable "availability_zone_1" {
+  description = "The availability zone for the deployment's RDS DB, and as first AZ for the application's LB"
+  type        = string
+}
+
+variable "availability_zone_2" {
+  description = "Second availability zone for the deployment's application LB"
+  type        = string
+}
 
 variable "auto_update" {
   description = " Whether the webservice and UI should update themselves nightly."
@@ -34,4 +52,3 @@ variable "eni_private_ip" {
   description = "Private IP to use for the ENI associated with EC2"
   type = string
 }
-

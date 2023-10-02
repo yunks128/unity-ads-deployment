@@ -16,10 +16,10 @@ Parameters:
     Description: ID for the VPC the LB is to be within
     Type: String
   SubnetId1:
-    Description: ID for the first subnet the LB is to be accessible on
+    Description: ID for the first public subnet the LB is to be accessible on
     Type: String
   SubnetId2:
-    Description: ID for the second subnet the LB is to be accessible on
+    Description: ID for the second public subnet the LB is to be accessible on
     Type: String
   LBLogsS3BucketName:
     Description: The name of the S3 bucket for the LB logs

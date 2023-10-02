@@ -18,7 +18,7 @@ Parameters:
   VpcId:
     Description: VPC ID for desired VPC
     Type: String
-  SubnetId:
+  PrivateSubnetId:
     Description: Subnet ID for desired VPC
     Type: String
 
@@ -111,7 +111,7 @@ Resources:
         SecurityGroupIds:
           - !Ref ElasticsearchSecurityGroup
         SubnetIds:
-          - !Ref SubnetId
+          - !Ref PrivateSubnetId
       DomainEndpointOptions:
         EnforceHTTPS: false
       NodeToNodeEncryptionOptions:

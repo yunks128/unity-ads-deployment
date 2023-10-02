@@ -1,3 +1,11 @@
+module "vpc" {
+    source = "../../vpc/"
+    unity_instance = "${var.unity_instance}"
+    availability_zone_1 = "${var.availability_zone_1}"
+    availability_zone_2 = "${var.availability_zone_2}"
+    resource_prefix = "${var.resource_prefix}"
+}
+
 locals {
   name = "awsAppDockstoreStack"
 }
@@ -9,9 +17,9 @@ resource "aws_cloudformation_stack" "dockstore_app" {
 
   parameters = {
     ResourcePrefix = "${var.resource_prefix}"
-    VpcId = data.aws_vpc.unity_vpc.id
-    SubnetId = tolist(data.aws_subnets.unity_private_subnets.ids)[0]
-    AvailabilityZone = "${var.availability_zone}"
+    VpcId = module.vpc.unity_vpc
+    PrivateSubnetId = module.vpc.private_subnet1
+    AvailabilityZone = "${var.availability_zone_1}"
     AutoUpdate = "${var.auto_update}"
     LoadBalancerStack = "awsLBDockstoreStack"
     CoreStack = "awsCoreDockstoreStack"

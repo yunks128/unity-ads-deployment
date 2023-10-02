@@ -73,7 +73,7 @@ Resources:
         Version: '2012-10-17'
         Id: DockstoreBucketPolicy
         Statement:
-          Action:
+        - Action:
           - s3:GetObject
           Effect: Allow
           Resource: !Join ['', [!GetAtt S3Bucket.Arn, '/*']]

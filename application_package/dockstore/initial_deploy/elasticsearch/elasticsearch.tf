@@ -7,8 +7,9 @@ resource "aws_cloudformation_stack" "es" {
 
   parameters = {
     DomainName = "${var.resource_prefix}-dockstore-elasticsearch"
-    VpcId = data.aws_vpc.unity_vpc.id
-    SubnetId = tolist(data.aws_subnets.unity_private_subnets.ids)[0]
+    VpcId = "${var.unity_vpc}"
+    /* SubnetId = tolist(data.aws_subnets.unity_private_subnets.ids)[0] */
+    PrivateSubnetId = "${var.private_subnet_id1}"
 
     # Tags to pass to the CloudFormation resources
     ServiceArea = local.common_tags.ServiceArea

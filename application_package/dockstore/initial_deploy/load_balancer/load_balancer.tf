@@ -2,14 +2,18 @@ locals {
   name = "awsLBDockstoreStack"
 }
 
-resource "aws_cloudformation_stack" "dev" {
+resource "aws_cloudformation_stack" "env_resource" {
   name = local.name
 
   parameters = {
     ResourcePrefix = "${var.resource_prefix}"
-    VpcId = data.aws_vpc.unity_vpc.id
-    SubnetId1 = tolist(data.aws_subnets.unity_public_subnets.ids)[0]
-    SubnetId2 = tolist(data.aws_subnets.unity_public_subnets.ids)[1]
+    /* VpcId = data.aws_vpc.unity_vpc.id */
+    VpcId = "${var.unity_vpc}"
+    /* SubnetId1 = tolist(data.aws_subnets.unity_public_subnets.ids)[0]
+    SubnetId2 = tolist(data.aws_subnets.unity_public_subnets.ids)[1] */
+    SubnetId1 = "${var.subnet_id1}"
+    SubnetId2 = "${var.subnet_id2}"
+
     S3Stack = "awsS3DockstoreStack"
     LBLogsS3BucketName = "${var.lb_logs_bucket_name}"
     LBLogsS3BucketPrefix = "${var.lb_logs_bucket_prefix}"
