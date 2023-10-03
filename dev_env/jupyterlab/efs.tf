@@ -20,7 +20,7 @@ resource "aws_security_group" "dev_support_efs_jupyter_sg" {
 
 resource "aws_efs_mount_target" "dev_support_efs_mt" {
    file_system_id  = data.aws_efs_file_system.dev_support_fs.id
-   subnet_id       = tolist(data.aws_subnets.unity_public_subnets.ids)[0]
+   subnet_id       = tolist(data.aws_subnets.unity_public_subnets.ids)[1]
    security_groups = [aws_security_group.dev_support_efs_jupyter_sg.id]
 }
 

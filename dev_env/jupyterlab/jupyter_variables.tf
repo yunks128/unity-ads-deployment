@@ -1,3 +1,8 @@
+variable "component_cost_name" {
+  description = "Component name to use in cost tagging"
+  default = "jupyterhub"
+}
+
 variable "load_balancer_port" {
   description = "Incoming port where load balancer will accept traffic"
   type       = number
