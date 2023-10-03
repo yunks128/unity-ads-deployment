@@ -4,7 +4,8 @@ resource "aws_eks_cluster" "jupyter_cluster" {
   version  = "1.22"
 
   vpc_config {
-    subnet_ids = data.aws_subnets.unity_public_subnets.ids
+    subnet_ids = concat(local.az_subnet_ids[var.availability_zone_1].private,
+                        local.az_subnet_ids[var.availability_zone_2].private)
   }
 
   # Ensure that IAM Role permissions are created before and deleted after EKS Cluster handling.
@@ -18,7 +19,8 @@ resource "aws_eks_node_group" "jupyter_cluster_node_group" {
   cluster_name    = aws_eks_cluster.jupyter_cluster.name
   node_group_name = "${var.resource_prefix}-${var.tenant_identifier}-jupyter-nodegroup"
   node_role_arn   = aws_iam_role.eks_node_role.arn
-  subnet_ids      = data.aws_subnets.unity_public_subnets.ids
+  subnet_ids      = concat(local.az_subnet_ids[var.availability_zone_1].private,
+                           local.az_subnet_ids[var.availability_zone_2].private)
 
   scaling_config {
     desired_size = 4

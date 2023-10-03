@@ -45,3 +45,15 @@ variable "cognito_user_pool_name" {
   type        = string
   default     = "unity-user-pool"
 }
+
+variable "availability_zone_1" {
+  description = "First availability zone for the deployment"
+  type        = string
+  default     = "us-west-2c"
+}
+
+variable "availability_zone_2" {
+  description = "Second availability zone for the deployment"
+  type        = string
+  default     = "us-west-2b"
+}

@@ -3,7 +3,8 @@ resource "aws_lb" "jupyter_alb" {
   name               = "jupyter-${var.tenant_identifier}-alb"
   load_balancer_type = "application"
   security_groups    = [ "${aws_security_group.jupyter_alb_sg.id}" ]
-  subnets            = data.aws_subnets.unity_public_subnets.ids
+  subnets            = concat(local.az_subnet_ids[var.availability_zone_1].public,
+                              local.az_subnet_ids[var.availability_zone_2].public)
 
   tags = {
     Name = "${var.resource_prefix}-${var.tenant_identifier}-jupyter-alb"
