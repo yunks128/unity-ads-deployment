@@ -1,7 +1,7 @@
 resource "aws_eks_cluster" "jupyter_cluster" {
   name     = "${var.resource_prefix}-${var.tenant_identifier}-jupyter-cluster"
   role_arn = aws_iam_role.eks_cluster_role.arn
-  version  = "1.23"
+  version  = "1.22"
 
   vpc_config {
     subnet_ids = data.aws_subnets.unity_public_subnets.ids

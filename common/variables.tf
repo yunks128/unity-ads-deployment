@@ -22,6 +22,12 @@ variable "s3_identifier" {
   default     = "dev"
 }
 
+variable "efs_identifier" {
+  description = "EFS file system to connect Jupyter shared storage with"
+  type        = string
+  default     = "uads-development-efs-fs"
+}
+
 variable "cognito_oauth_base_url" {
   description = "Base URL for using the Cognito Open Auth 2 interface"
   type        = string
