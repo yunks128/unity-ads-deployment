@@ -15,3 +15,18 @@ variable "jupyter_proxy_port" {
   type       = number
   default    = 32232
 }
+
+variable "cognito_oauth_base_url" {
+  description = "Base URL for using the Cognito Open Auth 2 interface"
+  type        = string
+}
+
+variable "cognito_oauth_client_id" {
+  description = "Cognito user pool client ID"
+  type        = string
+}
+
+variable "cognito_oauth_client_secret" {
+  description = "Cognito user pool client secret"
+  type        = string
+}

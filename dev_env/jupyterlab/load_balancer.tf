@@ -30,8 +30,13 @@ resource "aws_lb_target_group" "jupyter_alb_target_group" {
   }
 }
 
+resource "tls_private_key" "jupyter_priv_key" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
+
 resource "tls_self_signed_cert" "jupyter_alb_certificate_data" {
-  private_key_pem = file("private_key.pem")
+  private_key_pem = tls_private_key.jupyter_priv_key.private_key_pem
 
   dns_names = [ aws_lb.jupyter_alb.dns_name ]
 
@@ -64,7 +69,7 @@ resource "random_id" "cert" {
 resource "aws_iam_server_certificate" "jupyter_alb_server_certificate" {
   name             = "Unity-${var.tenant_identifier}-JupyterHub-Certificate-${random_id.cert.hex}"
   certificate_body = tls_self_signed_cert.jupyter_alb_certificate_data.cert_pem
-  private_key      = file("private_key.pem")
+  private_key      = tls_private_key.jupyter_priv_key.private_key_pem
 
   lifecycle {
     create_before_destroy = true

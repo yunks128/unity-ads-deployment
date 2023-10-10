@@ -6,14 +6,15 @@ resource "aws_cognito_user_pool_client" "jupyter_cognito_client" {
   name          = "${var.resource_prefix}-jupyter-${var.tenant_identifier}-client"
   user_pool_id  = tolist(data.aws_cognito_user_pools.unity_user_pool.ids)[0]
 
-  callback_urls = ["${local.jupyter_base_url}/hub/oauth_callback"]
-  logout_urls   = ["${local.jupyter_base_url}/hub/login/oauth_callback/logout"]
+  callback_urls = var.jupyter_base_url != null ? ["${var.jupyter_base_url}/hub/oauth_callback"] : null
+  logout_urls   = var.jupyter_base_url != null ? ["${var.jupyter_base_url}/hub/login/oauth_callback/logout"] : null
+
+  allowed_oauth_flows                           = var.jupyter_base_url != null ? ["code"] : null
+  allowed_oauth_flows_user_pool_client          = var.jupyter_base_url != null ? true : null
+  allowed_oauth_scopes                          = var.jupyter_base_url != null ? ["email", "openid", "profile"] : null
 
   generate_secret                               = true
   supported_identity_providers                  = ["COGNITO"]
-  allowed_oauth_flows                           = ["code"]
-  allowed_oauth_flows_user_pool_client          = true
-  allowed_oauth_scopes                          = ["email", "openid", "profile"]
   enable_propagate_additional_user_context_data = "false"
   enable_token_revocation                       = "true"
   prevent_user_existence_errors                 = "ENABLED"
@@ -25,4 +26,12 @@ resource "aws_cognito_user_pool_client" "jupyter_cognito_client" {
     id_token      = "minutes"
     refresh_token = "days"
   }
+}
+
+output "cognito_user_pool_id" {
+  value = tolist(data.aws_cognito_user_pools.unity_user_pool.ids)[0]
+}
+
+output "cognito_client_id" {
+  value = aws_cognito_user_pool_client.jupyter_cognito_client.id
 }

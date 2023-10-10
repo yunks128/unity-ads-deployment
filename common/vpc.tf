@@ -19,7 +19,7 @@ data "aws_subnets" "public" {
   }
   filter {
     name = "tag:Name"
-    values = ["Unity-Dev-Pub-Subnet*"]
+    values = ["${var.unity_instance}-Pub-Subnet*"]
   }
 }
 
@@ -30,7 +30,7 @@ data "aws_subnets" "private" {
   }
   filter {
     name = "tag:Name"
-    values = ["Unity-Dev-Priv-Subnet*"]
+    values = ["${var.unity_instance}-Priv-Subnet*"]
   }
 }
 

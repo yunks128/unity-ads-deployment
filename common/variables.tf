@@ -1,13 +1,15 @@
 variable "unity_instance" {
+  # This should match the VPC name
+  # Example Value: "Unity-Dev"
   description = "Name of the Unity instance where deploying"
   type        = string
-  default     = "Unity-Dev"
 }
 
 variable "tenant_identifier" {
+  # String inserted into many different resource names
+  # Example Value: "development"
   description = "String identifying the tenant for which resources are created"
   type        = string
-  default     = "development"
 }
 
 variable "resource_prefix" {
@@ -26,24 +28,6 @@ variable "efs_identifier" {
   description = "EFS file system to connect Jupyter shared storage with"
   type        = string
   default     = "uads-development-efs-fs"
-}
-
-variable "cognito_oauth_base_url" {
-  description = "Base URL for using the Cognito Open Auth 2 interface"
-  type        = string
-  default     = "https://unitysds.auth.us-west-2.amazoncognito.com"
-}
-
-variable "cognito_oidc_base_url" {
-  description = "Base URL for using the Cognito OIDC interface"
-  type        = string
-  default     = "https://cognito-idp.us-west-2.amazonaws.com"
-}
-
-variable "cognito_user_pool_name" {
-  description = "String identifying the Cognito user pool handling authentification"
-  type        = string
-  default     = "unity-user-pool"
 }
 
 variable "availability_zone_1" {
