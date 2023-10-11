@@ -14,4 +14,4 @@ cd $(realpath $script_dir/..)/jupyterlab
 
 jupyter_uri=$(terraform output -raw jupyter_base_uri)
 
-echo "TF_VAR_jupyter_base_uri=\"${jupyter_uri}\""
+echo "export TF_VAR_jupyter_base_uri=\"${jupyter_uri}\""

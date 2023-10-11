@@ -29,3 +29,7 @@ resource "helm_release" "jupyter_helm" {
     helm_release.kube2iam_helm,
   ]
 }
+
+output "kube_namespace" {
+    value = helm_release.jupyter_helm.namespace
+}
