@@ -4,14 +4,14 @@ resource "aws_security_group" "dev_support_efs_jupyter_sg" {
    vpc_id = data.aws_vpc.unity_vpc.id
 
    ingress {
-     security_groups = [aws_eks_cluster.jupyter_cluster.vpc_config[0].cluster_security_group_id]
+     security_groups = [ for vc in aws_eks_cluster.jupyter_cluster.vpc_config: vc.cluster_security_group_id ]
      from_port = 2049
      to_port = 2049 
      protocol = "tcp"
    }     
         
    egress {
-     security_groups = [aws_eks_cluster.jupyter_cluster.vpc_config[0].cluster_security_group_id]
+     security_groups = [ for vc in aws_eks_cluster.jupyter_cluster.vpc_config: vc.cluster_security_group_id ]
      from_port = 0
      to_port = 0
      protocol = "-1"
