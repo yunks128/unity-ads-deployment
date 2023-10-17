@@ -1,33 +1,32 @@
 variable "unity_instance" {
-  # This should match the VPC name
-  # Example Value: "Unity-Dev"
-  description = "Name of the Unity instance where deploying"
+  description = "Name of the Unity instance where deploying, must match the VPC name"
   type        = string
+  # Example Value: "Unity-Dev"
 }
 
 variable "tenant_identifier" {
-  # String inserted into many different resource names
+  description = "String identifying the tenant for which resources are created, string inserted into generated resource names"
+  type        = string
   # Example Value: "development"
-  description = "String identifying the tenant for which resources are created"
-  type        = string
-}
-
-variable "resource_prefix" {
-  description = "String used at the beginning of the names for all resources to identify them according to the UADS subsystem"
-  type        = string
-  default     = "uads"
 }
 
 variable "s3_identifier" {
   description = "String used in S3 bucket names to differentiate them between deployment venues"
   type        = string
-  default     = "dev"
+  # Example value: "dev"
 }
 
 variable "efs_identifier" {
   description = "EFS file system to connect Jupyter shared storage with"
   type        = string
   default     = "uads-development-efs-fs"
+  # Example value:uads-development-efs-fs"
+}
+
+variable "resource_prefix" {
+  description = "String used at the beginning of the names for all resources to identify them according to the UADS subsystem"
+  type        = string
+  default     = "uads"
 }
 
 variable "availability_zone_1" {

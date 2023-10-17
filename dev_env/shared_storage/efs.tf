@@ -6,3 +6,10 @@ resource "aws_efs_file_system" "dev_support_efs" {
      Name = "${var.efs_identifier}"
    }
 }
+
+resource "aws_efs_access_point" "jupyter_shared" {
+  file_system_id = aws_efs_file_system.dev_support_efs.id
+  root_directory {
+    path = "/shared"
+  }
+}
