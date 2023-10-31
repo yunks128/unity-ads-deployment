@@ -52,6 +52,11 @@ resource "aws_autoscaling_attachment" "autoscaling_attachment" {
   lb_target_group_arn   = aws_lb_target_group.jupyter_alb_target_group.arn
 }
 
+resource "aws_autoscaling_attachment" "nlb_autoscaling_attachment" {
+  autoscaling_group_name = lookup(lookup(lookup(aws_eks_node_group.jupyter_cluster_node_group, "resources")[0], "autoscaling_groups")[0], "name")
+  lb_target_group_arn   = aws_lb_target_group.jupyter_nlb_target_group.arn
+}
+
 output "eks_cluster_name" {
   value = aws_eks_cluster.jupyter_cluster.name
 }

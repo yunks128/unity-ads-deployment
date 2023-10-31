@@ -1,4 +1,4 @@
-resource "aws_security_group" "jupyter_alb_sg" {
+resource "aws_security_group" "jupyter_lb_sg" {
   name        = "${var.resource_prefix}-${var.tenant_identifier}-lb-sg"
   description = "U-ADS ${var.tenant_identifier} JupyterHub application load balancer security group"
 
@@ -31,6 +31,6 @@ resource "aws_security_group_rule" "jupyter_cluster_allow_lb" {
   from_port                = "30000"
   to_port                  = "32767"
   protocol                 = "tcp"
-  source_security_group_id = aws_security_group.jupyter_alb_sg.id
+  source_security_group_id = aws_security_group.jupyter_lb_sg.id
   security_group_id        = aws_eks_cluster.jupyter_cluster.vpc_config[0].cluster_security_group_id
 }

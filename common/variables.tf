@@ -38,5 +38,5 @@ variable "availability_zone_1" {
 variable "availability_zone_2" {
   description = "Second availability zone for the deployment"
   type        = string
-  default     = "us-west-2b"
+  default     = "us-west-2d"
 }
