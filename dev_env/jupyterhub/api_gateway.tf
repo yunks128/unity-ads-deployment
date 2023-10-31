@@ -51,53 +51,92 @@ resource "aws_api_gateway_resource" "api_resource_jupyter" {
 ######
 # Redirection of base URL /ads/jupyter
 
-### create the method GET and assign it to the resource /jupyter
-##resource "aws_api_gateway_method" "api_method_base" {
-##  rest_api_id = data.aws_api_gateway_rest_api.unity_api_gateway.id
-##  resource_id = aws_api_gateway_resource.api_resource_jupyter.id
-##
-##  http_method   = "GET"
-##  authorization = "NONE"
-##}
-##
-### create the mock integration which will returns the statusCode 301 on the previous method GET of the /jupyter
-##resource "aws_api_gateway_integration" "api_integration_base" {
-##  rest_api_id = data.aws_api_gateway_rest_api.unity_api_gateway.id
-##  resource_id = aws_api_gateway_resource.api_resource_jupyter.id
-##
-##  http_method = aws_api_gateway_method.api_method_base.http_method
-##  type        = "MOCK"
-##
-##  request_templates = {
-##    "application/json" : "{ \"statusCode\": 301 }"
-##  }
-##}
-##
-### create the method response and enable the header Location
-##resource "aws_api_gateway_method_response" "api_response_base_301" {
-##  rest_api_id = data.aws_api_gateway_rest_api.unity_api_gateway.id
-##  resource_id = aws_api_gateway_resource.api_resource_jupyter.id
-##
-##  http_method = aws_api_gateway_method.api_method_base.http_method
-##  status_code = "301"
-##
-##  response_parameters = {
-##    "method.response.header.Location" : true
-##  }
-##}
-##
-### Fill the previous header with the destination. Notice the syntax of the location with single quotes wrapped by doubles.
-##resource "aws_api_gateway_integration_response" "api_response_redirect" {
-##  rest_api_id = data.aws_api_gateway_rest_api.unity_api_gateway.id
-##  resource_id = aws_api_gateway_resource.api_resource_jupyter.id
-##
-##  http_method = aws_api_gateway_method.api_method_base.http_method
-##  status_code = aws_api_gateway_method_response.api_response_base_301.status_code
-##
-##  response_parameters = {
-##    "method.response.header.Location" : "'/${local.jupyter_base_path}/hub/'"
-##  }
-##}
+# create the method GET and assign it to the resource /jupyter
+resource "aws_api_gateway_method" "api_method_base" {
+  rest_api_id = data.aws_api_gateway_rest_api.unity_api_gateway.id
+  resource_id = aws_api_gateway_resource.api_resource_jupyter.id
+
+  http_method   = "GET"
+  authorization = "NONE"
+}
+
+# create the mock integration which will returns the statusCode 301 on the previous method GET of the /jupyter
+resource "aws_api_gateway_integration" "api_integration_base" {
+  rest_api_id = data.aws_api_gateway_rest_api.unity_api_gateway.id
+  resource_id = aws_api_gateway_resource.api_resource_jupyter.id
+
+  http_method = aws_api_gateway_method.api_method_base.http_method
+  type        = "MOCK"
+
+  request_templates = {
+    "application/json" : "{ \"statusCode\": 301 }"
+  }
+}
+
+# create the method response and enable the header Location
+resource "aws_api_gateway_method_response" "api_response_base_301" {
+  rest_api_id = data.aws_api_gateway_rest_api.unity_api_gateway.id
+  resource_id = aws_api_gateway_resource.api_resource_jupyter.id
+
+  http_method = aws_api_gateway_method.api_method_base.http_method
+  status_code = "301"
+
+  response_parameters = {
+    "method.response.header.Location" : true
+  }
+}
+
+# Fill the previous header with the destination. Notice the syntax of the location with single quotes wrapped by doubles.
+resource "aws_api_gateway_integration_response" "api_response_redirect" {
+  rest_api_id = data.aws_api_gateway_rest_api.unity_api_gateway.id
+  resource_id = aws_api_gateway_resource.api_resource_jupyter.id
+
+  http_method = aws_api_gateway_method.api_method_base.http_method
+  status_code = aws_api_gateway_method_response.api_response_base_301.status_code
+
+  response_parameters = {
+    "method.response.header.Location" : "'/${local.jupyter_base_path}/hub/'"
+  }
+}
+
+######
+# Directly handle / so that we avoid redirect loop
+
+resource "aws_api_gateway_resource" "api_resource_hub" {
+  rest_api_id = data.aws_api_gateway_rest_api.unity_api_gateway.id
+  parent_id   = aws_api_gateway_resource.api_resource_jupyter.id
+  path_part   = "hub"
+}
+
+resource "aws_api_gateway_method" "api_method_hub" {
+  rest_api_id = data.aws_api_gateway_rest_api.unity_api_gateway.id
+  resource_id = aws_api_gateway_resource.api_resource_hub.id
+
+  http_method      = "ANY"
+
+  api_key_required = "false"
+  authorization    = "NONE"
+}
+
+# proxying of end point to the nlb 
+resource "aws_api_gateway_integration" "api_integration_hub" {
+  rest_api_id             = data.aws_api_gateway_rest_api.unity_api_gateway.id
+  resource_id             = aws_api_gateway_resource.api_resource_hub.id
+
+  http_method             = "ANY"
+  integration_http_method = "ANY"
+
+  type                    = "HTTP_PROXY"
+  uri                     = "${local.jupyter_proxy_dest}/hub/"
+
+  connection_type         = "VPC_LINK"
+  connection_id           = aws_api_gateway_vpc_link.api_lb_link_proxy.id
+
+  # need to wait for alb 
+  depends_on = [
+    aws_lb.jupyter_nlb
+  ]
+}
 
 ######
 # Proxy resources
@@ -147,15 +186,24 @@ resource "aws_api_gateway_integration" "api_integration_proxy" {
   ]
 }
 
+######
+# Deployment
+
 resource "aws_api_gateway_deployment" "jupyter_api_deployment" {
   stage_name    = var.api_gateway_stage_name
   rest_api_id   = data.aws_api_gateway_rest_api.unity_api_gateway.id
 
-  depends_on = [ aws_api_gateway_integration.api_integration_proxy ]
+  depends_on = [ 
+    aws_api_gateway_integration.api_integration_proxy, 
+    aws_api_gateway_integration.api_integration_hub
+  ]
 }
 
+######
+# Variables
+
 locals {
-  jupyter_base_url = "${aws_api_gateway_deployment.jupyter_api_deployment.invoke_url}${aws_api_gateway_resource.api_resource_jupyter.path}/"
+  jupyter_base_url = "${aws_api_gateway_deployment.jupyter_api_deployment.invoke_url}${aws_api_gateway_resource.api_resource_jupyter.path}"
 }
 
 locals {
