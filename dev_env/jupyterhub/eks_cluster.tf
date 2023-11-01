@@ -1,7 +1,7 @@
 resource "aws_eks_cluster" "jupyter_cluster" {
   name     = "${var.resource_prefix}-${var.tenant_identifier}-jupyter-cluster"
   role_arn = aws_iam_role.eks_cluster_role.arn
-  version  = "1.22"
+  version  = "1.24"
 
   vpc_config {
     subnet_ids = concat(local.az_subnet_ids[var.availability_zone_1].private,
@@ -55,6 +55,19 @@ resource "aws_autoscaling_attachment" "autoscaling_attachment" {
 resource "aws_autoscaling_attachment" "nlb_autoscaling_attachment" {
   autoscaling_group_name = lookup(lookup(lookup(aws_eks_node_group.jupyter_cluster_node_group, "resources")[0], "autoscaling_groups")[0], "name")
   lb_target_group_arn   = aws_lb_target_group.jupyter_nlb_target_group.arn
+}
+
+# Connect the EKS cluster OpenID connect URL as a provider
+data "tls_certificate" "openid_cert" {
+  url = aws_eks_cluster.jupyter_cluster.identity.0.oidc.0.issuer
+}
+
+resource "aws_iam_openid_connect_provider" "eks_openid_provider" {
+  url = aws_eks_cluster.jupyter_cluster.identity[0].oidc[0].issuer
+
+  client_id_list = [ "sts.amazonaws.com" ]
+
+  thumbprint_list = [ data.tls_certificate.openid_cert.certificates.0.sha1_fingerprint ]
 }
 
 output "eks_cluster_name" {
