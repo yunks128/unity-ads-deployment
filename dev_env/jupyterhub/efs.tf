@@ -18,18 +18,28 @@ resource "aws_security_group" "dev_support_efs_jupyter_sg" {
    }
 }
 
-resource "aws_efs_mount_target" "dev_support_efs_mt" {
+resource "aws_efs_mount_target" "dev_support_efs_mt_1" {
    file_system_id  = data.aws_efs_file_system.dev_support_fs.id
    subnet_id       = local.az_subnet_ids[var.availability_zone_1].private[0]
    security_groups = [aws_security_group.dev_support_efs_jupyter_sg.id]
 }
 
+resource "aws_efs_mount_target" "dev_support_efs_mt_2" {
+   file_system_id  = data.aws_efs_file_system.dev_support_fs.id
+   subnet_id       = local.az_subnet_ids[var.availability_zone_2].private[0]
+   security_groups = [aws_security_group.dev_support_efs_jupyter_sg.id]
+}
+
+# Follows setup here:
+# https://aws.amazon.com/blogs/storage/persistent-storage-for-kubernetes/
+
 resource "kubernetes_storage_class" "efs_storage_class" {
   metadata {
     name = "efs"
   }
-  storage_provisioner = "kubernetes.io/aws-efs"
-  reclaim_policy      = "Delete"
+  storage_provisioner = "efs.csi.aws.com"
+  reclaim_policy      = "Retain"
+
   parameters = {
   }
 }
@@ -47,16 +57,23 @@ resource "kubernetes_persistent_volume" "dev_support_shared_volume" {
       storage = "100Gi"
     }
 
-    persistent_volume_reclaim_policy = "Delete"
+    persistent_volume_reclaim_policy = "Retain"
 
     persistent_volume_source {
-      nfs {
-	    server    = aws_efs_mount_target.dev_support_efs_mt.ip_address
-        path      = "/shared"
-        read_only = false
+      csi {
+        driver = "efs.csi.aws.com"
+        volume_handle = "${data.aws_efs_file_system.dev_support_fs.id}"
       }
     }
+
   }
+
+  # Prevents a cycle with eks_cluster.jupyter_hub
+  depends_on = [ 
+    kubernetes_storage_class.efs_storage_class,
+    aws_efs_mount_target.dev_support_efs_mt_1,
+    aws_efs_mount_target.dev_support_efs_mt_2
+  ]
 }
 
 resource "kubernetes_persistent_volume_claim" "dev_support_shared_volume_claim" {
@@ -68,7 +85,6 @@ resource "kubernetes_persistent_volume_claim" "dev_support_shared_volume_claim" 
   spec {
     access_modes = ["ReadWriteMany"]
 
-    # Critical that this is an empty string
     storage_class_name = "efs"
 
     resources {
@@ -76,9 +92,12 @@ resource "kubernetes_persistent_volume_claim" "dev_support_shared_volume_claim" 
         storage = "100Gi"
       }
     }
+
     volume_name = "${kubernetes_persistent_volume.dev_support_shared_volume.metadata.0.name}"
   }
 
   # Prevents a cycle with eks_cluster.jupyter_hub
-  depends_on = [ aws_efs_mount_target.dev_support_efs_mt ]
+  depends_on = [ 
+    kubernetes_persistent_volume.dev_support_shared_volume
+  ]
 }
