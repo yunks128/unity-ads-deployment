@@ -62,7 +62,7 @@ resource "kubernetes_persistent_volume" "dev_support_shared_volume" {
     persistent_volume_source {
       csi {
         driver = "efs.csi.aws.com"
-        volume_handle = "${data.aws_efs_file_system.dev_support_fs.id}"
+        volume_handle = "${data.aws_efs_file_system.dev_support_fs.id}::${local.dev_support_shared_ap_id}"
       }
     }
 
