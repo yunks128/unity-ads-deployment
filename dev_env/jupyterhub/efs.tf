@@ -44,6 +44,10 @@ resource "kubernetes_storage_class" "efs_storage_class" {
   }
 }
 
+# Documentation on how to set up volume_handle:
+# https://github.com/kubernetes-sigs/aws-efs-csi-driver/blob/master/examples/kubernetes/access_points/README.md#create-access-points-in-efs
+# See also:
+# https://kubernetes.io/docs/concepts/storage/persistent-volumes/
 resource "kubernetes_persistent_volume" "dev_support_shared_volume" {
   metadata {
     name = "${var.resource_prefix}-${var.tenant_identifier}-dev-data"
@@ -66,6 +70,7 @@ resource "kubernetes_persistent_volume" "dev_support_shared_volume" {
       }
     }
 
+    mount_options = [ "iam" ]
   }
 
   # Prevents a cycle with eks_cluster.jupyter_hub
