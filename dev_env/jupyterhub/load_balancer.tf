@@ -94,19 +94,7 @@ resource "aws_lb_listener" "jupyter_alb_listener" {
   }
 }
 
-#locals {
-#  jupyter_base_url = "https://${aws_lb.jupyter_alb.dns_name}:${var.load_balancer_port}"
-#}
-
-#locals {
-#  jupyter_base_path = "/"
-#}
-
-#output "jupyter_base_uri" {
-#  value = local.jupyter_base_url
-#}
-
-output "jupyter_alb_uri" {
+output "jupyter_alb_url" {
   value = "https://${aws_lb.jupyter_alb.dns_name}:${var.load_balancer_port}/${local.jupyter_base_path}"
 }
 
