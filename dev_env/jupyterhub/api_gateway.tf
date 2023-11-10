@@ -23,7 +23,7 @@ data "aws_api_gateway_rest_api" "unity_api_gateway" {
 ######
 # VPC Link to Jupyter NLB
 
-resource "aws_api_gateway_vpc_link" "api_lb_link_proxy" {
+resource "aws_api_gateway_vpc_link" "api_lb_link" {
   name        = "jupyter-${var.tenant_identifier}-vpc-link"
   description = "VPC Link to ${var.tenant_identifier} Jupyter NLB"
   target_arns = [aws_lb.jupyter_nlb.arn]
@@ -130,7 +130,7 @@ resource "aws_api_gateway_integration" "api_integration_hub" {
   uri                     = "${local.jupyter_proxy_dest}/hub/"
 
   connection_type         = "VPC_LINK"
-  connection_id           = aws_api_gateway_vpc_link.api_lb_link_proxy.id
+  connection_id           = aws_api_gateway_vpc_link.api_lb_link.id
 
   # need to wait for alb 
   depends_on = [
@@ -174,7 +174,7 @@ resource "aws_api_gateway_integration" "api_integration_proxy" {
   uri                     = "${local.jupyter_proxy_dest}/{proxy}"
 
   connection_type         = "VPC_LINK"
-  connection_id           = aws_api_gateway_vpc_link.api_lb_link_proxy.id
+  connection_id           = aws_api_gateway_vpc_link.api_lb_link.id
 
   request_parameters = {
     "integration.request.path.proxy" = "method.request.path.proxy"
@@ -182,7 +182,8 @@ resource "aws_api_gateway_integration" "api_integration_proxy" {
 
   # need to wait for alb 
   depends_on = [
-    aws_lb.jupyter_nlb
+    aws_lb.jupyter_nlb,
+    aws_api_gateway_vpc_link.api_lb_link
   ]
 }
 
