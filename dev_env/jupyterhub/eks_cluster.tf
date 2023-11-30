@@ -45,21 +45,14 @@ resource "aws_eks_node_group" "jupyter_cluster_node_group" {
   }
 }
 
-# Attach eks node_group to load balancer through the autoscaling group
-# Solution from here: https://github.com/aws/containers-roadmap/issues/709
-resource "aws_autoscaling_attachment" "autoscaling_attachment" {
-  autoscaling_group_name = lookup(lookup(lookup(aws_eks_node_group.jupyter_cluster_node_group, "resources")[0], "autoscaling_groups")[0], "name")
-  lb_target_group_arn   = aws_lb_target_group.jupyter_alb_target_group.arn
-}
-
-resource "aws_autoscaling_attachment" "nlb_autoscaling_attachment" {
-  autoscaling_group_name = lookup(lookup(lookup(aws_eks_node_group.jupyter_cluster_node_group, "resources")[0], "autoscaling_groups")[0], "name")
-  lb_target_group_arn   = aws_lb_target_group.jupyter_nlb_target_group.arn
-}
-
 # Connect the EKS cluster OpenID connect URL as a provider
 data "tls_certificate" "openid_cert" {
   url = aws_eks_cluster.jupyter_cluster.identity.0.oidc.0.issuer
+}
+
+# Extract the name of the EKS cluster auto scaling group for use in connecting to front end
+locals {
+  autoscaling_group_name = lookup(lookup(lookup(aws_eks_node_group.jupyter_cluster_node_group, "resources")[0], "autoscaling_groups")[0], "name")
 }
 
 resource "aws_iam_openid_connect_provider" "eks_openid_provider" {

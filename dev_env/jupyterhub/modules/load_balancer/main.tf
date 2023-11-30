@@ -4,9 +4,8 @@
 resource "aws_lb" "jupyter_alb" {
   name               = "jupyter-${var.tenant_identifier}-alb"
   load_balancer_type = "application"
-  security_groups    = [ "${aws_security_group.jupyter_lb_sg.id}" ]
-  subnets            = concat(local.az_subnet_ids[var.availability_zone_1].public,
-                              local.az_subnet_ids[var.availability_zone_2].public)
+  security_groups    = [ var.security_group_id ]
+  subnets            = var.lb_subnet_ids
 
   tags = {
     Name = "${var.resource_prefix}-${var.tenant_identifier}-jupyter-alb"
@@ -16,7 +15,7 @@ resource "aws_lb" "jupyter_alb" {
 resource "aws_lb_target_group" "jupyter_alb_target_group" {
   name        = "jupyter-${var.tenant_identifier}-alb-tg"
   target_type = "instance"
-  vpc_id      = data.aws_vpc.unity_vpc.id
+  vpc_id      = var.vpc_id
 
   protocol         = "HTTP"
   port             = var.jupyter_proxy_port
@@ -27,7 +26,7 @@ resource "aws_lb_target_group" "jupyter_alb_target_group" {
 
   # alter the destination of the health check
   health_check {
-    path = "/${local.jupyter_base_path}/hub/health"
+    path = "/hub/health"
     port = var.jupyter_proxy_port
   }
 }
@@ -44,7 +43,7 @@ resource "tls_self_signed_cert" "jupyter_alb_certificate_data" {
 
   subject {
     common_name  = "Unity ${var.tenant_identifier} JupyterHub"
-    organization = "${var.unity_instance}"
+    organization = "${var.resource_prefix}-${var.tenant_identifier}"
   }
 
   # About half a year
@@ -94,55 +93,9 @@ resource "aws_lb_listener" "jupyter_alb_listener" {
   }
 }
 
-output "jupyter_alb_url" {
-  value = "https://${aws_lb.jupyter_alb.dns_name}:${var.load_balancer_port}/${local.jupyter_base_path}"
-}
-
-##############################################################
-# Network Load Balancer connecting EKS cluster to API Gateway
-
-resource "aws_lb" "jupyter_nlb" {
-  name               = "jupyter-${var.tenant_identifier}-nlb"
-  load_balancer_type = "network"
-  security_groups    = [ "${aws_security_group.jupyter_lb_sg.id}" ]
-  subnets            = concat(local.az_subnet_ids[var.availability_zone_1].private,
-                              local.az_subnet_ids[var.availability_zone_2].private)
-
-  tags = {
-    Name = "/${var.resource_prefix}-${var.tenant_identifier}-jupyter-nlb"
-  }
-}
-
-resource "aws_lb_target_group" "jupyter_nlb_target_group" {
-  name        = "jupyter-${var.tenant_identifier}-nlb-tg"
-  target_type = "instance"
-  vpc_id      = data.aws_vpc.unity_vpc.id
-
-  protocol         = "TCP"
-  port             = var.jupyter_proxy_port
-
-  tags = {
-    name = "${var.resource_prefix}-${var.tenant_identifier}-alb-target-group"
-  }
-
-  # alter the destination of the health check
-  health_check {
-    path = "/${local.jupyter_base_path}/hub/health"
-    port = var.jupyter_proxy_port
-  }
-}
-
-resource "aws_lb_listener" "jupyter_nlb_listener" {
-  load_balancer_arn = aws_lb.jupyter_nlb.arn
-  port              = var.load_balancer_port
-  protocol          = "TCP"
-
-  tags = {
-    Name = "${var.resource_prefix}-${var.tenant_identifier}-nlb-listener"
-  }
-
-  default_action {
-    target_group_arn = aws_lb_target_group.jupyter_nlb_target_group.arn
-    type             = "forward"
-  }
+# Attach eks node_group to load balancer through the autoscaling group
+# Solution from here: https://github.com/aws/containers-roadmap/issues/709
+resource "aws_autoscaling_attachment" "autoscaling_attachment" {
+  autoscaling_group_name = var.autoscaling_group_name
+  lb_target_group_arn    = aws_lb_target_group.jupyter_alb_target_group.arn
 }

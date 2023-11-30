@@ -1,26 +1,59 @@
-variable "api_gateway_name" {
-  description = "Name of the API gateway to connect proxies with to search for as an existing resource"
-  type        = string
-  default     = "Unity API Gateway"
+##############################################################
+# Network Load Balancer connecting EKS cluster to API Gateway
+
+resource "aws_lb" "jupyter_nlb" {
+  name               = "jupyter-${var.tenant_identifier}-nlb"
+  load_balancer_type = "network"
+  security_groups    = [ var.security_group_id ]
+  subnets            = var.lb_subnet_ids
+
+  tags = {
+    Name = "/${var.resource_prefix}-${var.tenant_identifier}-jupyter-nlb"
+  }
 }
 
-variable "api_gateway_path_to_ads" {
-  description = "Prefix of the Unity ADS portion of the API Gateway URL namespace to search for an existing resource"
-  type        = string
-  default     = "/ads"
+resource "aws_lb_target_group" "jupyter_nlb_target_group" {
+  name        = "jupyter-${var.tenant_identifier}-nlb-tg"
+  target_type = "instance"
+  vpc_id      = var.vpc_id
+
+  protocol         = "TCP"
+  port             = var.jupyter_proxy_port
+
+  tags = {
+    name = "${var.resource_prefix}-${var.tenant_identifier}-alb-target-group"
+  }
+
+  # alter the destination of the health check
+  health_check {
+    path = "/${local.jupyter_base_path}/hub/health"
+    port = var.jupyter_proxy_port
+  }
 }
 
-variable "api_gateway_stage_name" {
-  description = "Name of the deployed API gateway stage"
-  type        = string
-  default     = "dev"
+resource "aws_lb_listener" "jupyter_nlb_listener" {
+  load_balancer_arn = aws_lb.jupyter_nlb.arn
+  port              = var.load_balancer_port
+  protocol          = "TCP"
+
+  tags = {
+    Name = "${var.resource_prefix}-${var.tenant_identifier}-nlb-listener"
+  }
+
+  default_action {
+    target_group_arn = aws_lb_target_group.jupyter_nlb_target_group.arn
+    type             = "forward"
+  }
 }
 
-data "aws_api_gateway_rest_api" "unity_api_gateway" {
-  name = var.api_gateway_name
+# Attach eks node_group to load balancer through the autoscaling group
+# Solution from here: https://github.com/aws/containers-roadmap/issues/709
+resource "aws_autoscaling_attachment" "nlb_autoscaling_attachment" {
+  autoscaling_group_name = var.autoscaling_group_name
+  lb_target_group_arn    = aws_lb_target_group.jupyter_nlb_target_group.arn
 }
 
-######
+#########################
 # VPC Link to Jupyter NLB
 
 resource "aws_api_gateway_vpc_link" "api_lb_link" {
@@ -34,7 +67,12 @@ resource "aws_api_gateway_vpc_link" "api_lb_link" {
   ]
 }
 
-######
+# Retrieve the API gateway ID given the name
+data "aws_api_gateway_rest_api" "unity_api_gateway" {
+  name = var.api_gateway_name
+}
+
+########################
 # Base path /ads/jupyter
 
 data "aws_api_gateway_resource" "api_resource_ads" {
@@ -213,12 +251,4 @@ locals {
 
 locals {
   jupyter_proxy_dest = "http://${aws_lb.jupyter_nlb.dns_name}:${aws_lb_listener.jupyter_nlb_listener.port}/${local.jupyter_base_path}"
-}
-
-output "jupyter_base_path" {
-  value = local.jupyter_base_path
-}
-
-output "jupyter_base_url" {
-  value = local.jupyter_base_url
 }

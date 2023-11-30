@@ -1,0 +1,45 @@
+#####################
+# Frontend selection
+#
+# Only one of the two choices below can be enabled at a time
+# Run terraform init if changing between the two
+
+###################################################################
+# Use an API Gateway connected to a NLB as the Jupyterhub Frontend
+# 
+# This options mostly works except that websockets fail to properly
+# be routed through the REST API gateway, more work would be needed
+# to get it working.
+
+# module "frontend" {
+#   source = "./modules/api_gateway"
+# 
+#   tenant_identifier = var.tenant_identifier
+#   resource_prefix = var.resource_prefix
+#   load_balancer_port = var.load_balancer_port
+#   jupyter_proxy_port = var.jupyter_proxy_port
+# 
+#   vpc_id = data.aws_vpc.unity_vpc.id
+#   lb_subnet_ids = concat(local.az_subnet_ids[var.availability_zone_1].private,
+#                          local.az_subnet_ids[var.availability_zone_2].private)
+#   security_group_id = aws_security_group.jupyter_lb_sg.id
+#   autoscaling_group_name = local.autoscaling_group_name
+# }
+
+#################################################################
+# Use only a Application Load Balancer as the Jupyterhub Frontend
+
+module "frontend" {
+  source = "./modules/load_balancer"
+
+  tenant_identifier = var.tenant_identifier
+  resource_prefix = var.resource_prefix
+  load_balancer_port = var.load_balancer_port
+  jupyter_proxy_port = var.jupyter_proxy_port
+
+  vpc_id = data.aws_vpc.unity_vpc.id
+  lb_subnet_ids = concat(local.az_subnet_ids[var.availability_zone_1].public,
+                         local.az_subnet_ids[var.availability_zone_2].public)
+  security_group_id = aws_security_group.jupyter_lb_sg.id
+  autoscaling_group_name = local.autoscaling_group_name
+}

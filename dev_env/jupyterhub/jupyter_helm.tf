@@ -13,8 +13,8 @@ resource "helm_release" "jupyter_helm" {
       cognito_oauth_base_url = var.cognito_oauth_base_url
       oauth_client_id        = var.cognito_oauth_client_id
       oauth_client_secret    = var.cognito_oauth_client_secret
-      jupyter_base_path      = "/${local.jupyter_base_path}/"
-      jupyter_base_url       = local.jupyter_base_url
+      jupyter_base_path      = module.frontend.jupyter_base_path != "" ? "/${module.frontend.jupyter_base_path}/" : "/"
+      jupyter_base_url       = module.frontend.jupyter_base_url
       jupyter_proxy_port     = var.jupyter_proxy_port
       shared_volume_name     = "${kubernetes_persistent_volume.dev_support_shared_volume.metadata.0.name}"
       kube2iam_role_arn      = "${aws_iam_role.jupyter_node_role.arn}"
@@ -24,7 +24,7 @@ resource "helm_release" "jupyter_helm" {
 
   # Need to wait for ALB to get created
   depends_on = [
-    aws_lb.jupyter_alb,
+    module.frontend,
     aws_eks_node_group.jupyter_cluster_node_group,
     helm_release.kube2iam_helm,
   ]
