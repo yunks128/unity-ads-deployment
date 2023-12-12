@@ -25,11 +25,11 @@ resource "helm_release" "jupyter_helm" {
   # Need to wait for ALB to get created
   depends_on = [
     module.frontend,
-    aws_eks_node_group.jupyter_cluster_node_group,
+    module.eks,
     helm_release.kube2iam_helm,
   ]
 }
 
 output "kube_namespace" {
-    value = helm_release.jupyter_helm.namespace
+  value = helm_release.jupyter_helm.namespace
 }

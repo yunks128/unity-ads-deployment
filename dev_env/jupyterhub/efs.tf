@@ -1,17 +1,17 @@
 resource "aws_security_group" "dev_support_efs_jupyter_sg" {
    name = "${var.resource_prefix}-${var.tenant_identifier}-efs-jupyter-sg"
    description= "Allows inbound EFS traffic from Jupyter cluster"
-   vpc_id = data.aws_vpc.unity_vpc.id
+   vpc_id = data.aws_ssm_parameter.vpc_id.value
 
    ingress {
-     security_groups = [ for vc in aws_eks_cluster.jupyter_cluster.vpc_config: vc.cluster_security_group_id ]
+     security_groups = [ module.eks.node_security_group_id ]
      from_port = 2049
      to_port = 2049 
      protocol = "tcp"
    }     
         
    egress {
-     security_groups = [ for vc in aws_eks_cluster.jupyter_cluster.vpc_config: vc.cluster_security_group_id ]
+     security_groups = [ module.eks.node_security_group_id ]
      from_port = 0
      to_port = 0
      protocol = "-1"
@@ -20,13 +20,13 @@ resource "aws_security_group" "dev_support_efs_jupyter_sg" {
 
 resource "aws_efs_mount_target" "dev_support_efs_mt_1" {
    file_system_id  = data.aws_efs_file_system.dev_support_fs.id
-   subnet_id       = local.az_subnet_ids[var.availability_zone_1].private[0]
+   subnet_id       = local.subnet_map["private"][0]
    security_groups = [aws_security_group.dev_support_efs_jupyter_sg.id]
 }
 
 resource "aws_efs_mount_target" "dev_support_efs_mt_2" {
    file_system_id  = data.aws_efs_file_system.dev_support_fs.id
-   subnet_id       = local.az_subnet_ids[var.availability_zone_2].private[0]
+   subnet_id       = local.subnet_map["private"][1]
    security_groups = [aws_security_group.dev_support_efs_jupyter_sg.id]
 }
 

@@ -2,7 +2,7 @@ resource "aws_security_group" "jupyter_lb_sg" {
   name        = "${var.resource_prefix}-${var.tenant_identifier}-lb-sg"
   description = "U-ADS ${var.tenant_identifier} JupyterHub application load balancer security group"
 
-  vpc_id = data.aws_vpc.unity_vpc.id
+  vpc_id = data.aws_ssm_parameter.vpc_id.value
 
   tags = {
     Name = "${var.resource_prefix}-${var.tenant_identifier}-lb-sg"
@@ -32,5 +32,5 @@ resource "aws_security_group_rule" "jupyter_cluster_allow_lb" {
   to_port                  = "32767"
   protocol                 = "tcp"
   source_security_group_id = aws_security_group.jupyter_lb_sg.id
-  security_group_id        = aws_eks_cluster.jupyter_cluster.vpc_config[0].cluster_security_group_id
+  security_group_id        = module.eks.node_security_group_id
 }

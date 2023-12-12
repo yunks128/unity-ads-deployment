@@ -19,11 +19,10 @@
 #   load_balancer_port = var.load_balancer_port
 #   jupyter_proxy_port = var.jupyter_proxy_port
 # 
-#   vpc_id = data.aws_vpc.unity_vpc.id
-#   lb_subnet_ids = concat(local.az_subnet_ids[var.availability_zone_1].private,
-#                          local.az_subnet_ids[var.availability_zone_2].private)
+#   vpc_id = data.aws_ssm_parameter.vpc_id.value
+#   lb_subnet_ids = local.subnet_map["private"]
 #   security_group_id = aws_security_group.jupyter_lb_sg.id
-#   autoscaling_group_name = local.autoscaling_group_name
+#   autoscaling_group_name = module.eks.eks_managed_node_groups_autoscaling_group_names[0]
 # }
 
 #################################################################
@@ -37,9 +36,8 @@ module "frontend" {
   load_balancer_port = var.load_balancer_port
   jupyter_proxy_port = var.jupyter_proxy_port
 
-  vpc_id = data.aws_vpc.unity_vpc.id
-  lb_subnet_ids = concat(local.az_subnet_ids[var.availability_zone_1].public,
-                         local.az_subnet_ids[var.availability_zone_2].public)
+  vpc_id = data.aws_ssm_parameter.vpc_id.value
+  lb_subnet_ids = local.subnet_map["public"]
   security_group_id = aws_security_group.jupyter_lb_sg.id
-  autoscaling_group_name = local.autoscaling_group_name
+  autoscaling_group_name = module.eks.eks_managed_node_groups_autoscaling_group_names[0]
 }

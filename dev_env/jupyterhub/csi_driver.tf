@@ -3,31 +3,38 @@
 
 ################
 # EBS CSI add on
-data "aws_iam_policy" "ebs_csi_policy" {
-  arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
-}
 
-module "irsa-ebs-csi" {
-  source  = "terraform-aws-modules/iam/aws//modules/iam-assumable-role-with-oidc"
-  version = "4.7.0"
+module "ebs_csi_irsa_role" {
+  source = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
 
-  create_role                   = true
-  role_name                     = "AmazonEKSTFEBSCSIRole-${aws_eks_cluster.jupyter_cluster.name}"
-  provider_url                  = replace(aws_eks_cluster.jupyter_cluster.identity.0.oidc.0.issuer, "https://", "")
-  role_policy_arns              = [ data.aws_iam_policy.ebs_csi_policy.arn ]
+  role_name             = "AmazonEKSTFEBSCSIRole-${module.eks.cluster_name}"
+  attach_ebs_csi_policy = true
 
-  oidc_fully_qualified_subjects = ["system:serviceaccount:kube-system:ebs-csi-controller-sa"]
+  oidc_providers = {
+    ex = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:ebs-csi-controller-sa"]
+    }
+  }
+
   role_permissions_boundary_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/mcp-tenantOperator-AMI-APIG"
+
+  tags = {
+    "eks_addon" = "efs-csi"
+    "terraform" = "true"
+  }
 }
 
 resource "aws_eks_addon" "ebs-csi" {
-  cluster_name             = aws_eks_cluster.jupyter_cluster.name
+  cluster_name             = module.eks.cluster_name
   addon_name               = "aws-ebs-csi-driver"
-  service_account_role_arn = module.irsa-ebs-csi.iam_role_arn
+  service_account_role_arn = module.ebs_csi_irsa_role.iam_role_arn
   tags = {
     "eks_addon" = "ebs-csi"
     "terraform" = "true"
   }
+
+  depends_on = [ module.eks ]
 }
 
 ################
@@ -37,25 +44,35 @@ data "aws_iam_policy" "efs_csi_policy" {
   arn = "arn:aws:iam::aws:policy/service-role/AmazonEFSCSIDriverPolicy"
 }
 
-module "irsa-efs-csi" {
-  source  = "terraform-aws-modules/iam/aws//modules/iam-assumable-role-with-oidc"
-  version = "4.7.0"
+module "efs_csi_irsa_role" {
+  source = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
 
-  create_role                   = true
-  role_name                     = "AmazonEKSTFEFSCSIRole-${aws_eks_cluster.jupyter_cluster.name}"
-  provider_url                  = replace(aws_eks_cluster.jupyter_cluster.identity.0.oidc.0.issuer, "https://", "")
-  role_policy_arns              = [ data.aws_iam_policy.efs_csi_policy.arn ]
+  role_name             = "AmazonEKSTFEFSCSIRole-${module.eks.cluster_name}"
+  attach_efs_csi_policy = true
 
-  oidc_fully_qualified_subjects = ["system:serviceaccount:kube-system:efs-csi-controller-sa"]
+  oidc_providers = {
+    ex = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:efs-csi-controller-sa"]
+    }
+  }
+
   role_permissions_boundary_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/mcp-tenantOperator-AMI-APIG"
-}
 
-resource "aws_eks_addon" "efs-csi" {
-  cluster_name             = aws_eks_cluster.jupyter_cluster.name
-  addon_name               = "aws-efs-csi-driver"
-  service_account_role_arn = module.irsa-efs-csi.iam_role_arn
   tags = {
     "eks_addon" = "efs-csi"
     "terraform" = "true"
   }
+}
+
+resource "aws_eks_addon" "efs-csi" {
+  cluster_name             = module.eks.cluster_name
+  addon_name               = "aws-efs-csi-driver"
+  service_account_role_arn = module.efs_csi_irsa_role.iam_role_arn
+  tags = {
+    "eks_addon" = "efs-csi"
+    "terraform" = "true"
+  }
+
+  depends_on = [ module.eks ]
 }

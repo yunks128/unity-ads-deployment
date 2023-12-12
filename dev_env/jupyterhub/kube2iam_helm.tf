@@ -15,5 +15,5 @@ resource "helm_release" "kube2iam_helm" {
     })
   ]
 
-  depends_on = []
+  depends_on = [ module.eks ]
 }

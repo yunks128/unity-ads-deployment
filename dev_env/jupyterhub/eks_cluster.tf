@@ -1,68 +1,62 @@
-resource "aws_eks_cluster" "jupyter_cluster" {
-  name     = "${var.resource_prefix}-${var.tenant_identifier}-jupyter-cluster"
-  role_arn = aws_iam_role.eks_cluster_role.arn
-  version  = "1.24"
-
-  vpc_config {
-    subnet_ids = concat(local.az_subnet_ids[var.availability_zone_1].private,
-                        local.az_subnet_ids[var.availability_zone_2].private)
-  }
-
-  # Ensure that IAM Role permissions are created before and deleted after EKS Cluster handling.
-  # Otherwise, EKS will not be able to properly delete EKS managed EC2 infrastructure such as Security Groups.
-  depends_on = [
-    aws_iam_role.eks_cluster_role
-  ]
+data "aws_ssm_parameter" "ami_id" {
+  name = "/mcp/amis/aml2-eks-1-25"
 }
 
-resource "aws_eks_node_group" "jupyter_cluster_node_group" {
-  cluster_name    = aws_eks_cluster.jupyter_cluster.name
-  node_group_name = "${var.resource_prefix}-${var.tenant_identifier}-jupyter-nodegroup"
-  node_role_arn   = aws_iam_role.eks_node_role.arn
-  subnet_ids      = concat(local.az_subnet_ids[var.availability_zone_1].private,
-                           local.az_subnet_ids[var.availability_zone_2].private)
+module "eks" {
+  source  = "terraform-aws-modules/eks/aws"
+  version = "~> 19.0"
 
-  scaling_config {
-    desired_size = 4
-    max_size     = 8
-    min_size     = 2
+  cluster_name    = "${var.resource_prefix}-${var.tenant_identifier}-jupyter-cluster"
+  cluster_version = "1.25"
+
+  cluster_addons = {
+    coredns = {
+      most_recent = true
+    }
+    kube-proxy = {
+      most_recent = true
+    }
+    vpc-cni = {
+      most_recent = true
+    }
   }
 
-  disk_size = 100
+  subnet_ids       = local.subnet_map["private"]
 
-  update_config {
-    max_unavailable = 2
+  vpc_id = data.aws_ssm_parameter.vpc_id.value
+
+  enable_irsa = true
+
+  create_iam_role = false
+  iam_role_arn = aws_iam_role.eks_cluster_role.arn
+
+  cluster_endpoint_public_access = true
+
+  eks_managed_node_group_defaults = {
+    create_iam_role = false
+    iam_role_arn    = aws_iam_role.eks_node_role.arn
+
+    ami_id          = data.aws_ssm_parameter.ami_id.value
+
+    # This seemes necessary so that MCP EKS ami images can communicate with the EKS cluster
+    enable_bootstrap_user_data = true
+    pre_bootstrap_user_data = <<-EOT
+      sudo sed -i 's/^net.ipv4.ip_forward = 0/net.ipv4.ip_forward = 1/' /etc/sysctl.conf && sudo sysctl -p |true
+    EOT
   }
 
-  # Ensure that IAM Role permissions are created before and deleted after EKS Node Group handling.
-  # Otherwise, EKS will not be able to properly delete EC2 Instances and Elastic Network Interfaces.
-  depends_on = [
-    aws_iam_role.eks_node_role
-  ]
-
-  lifecycle {
-    ignore_changes = [ scaling_config ]
+  eks_managed_node_groups = {
+    jupyter = {
+      instance_types = ["t3.xlarge", "t3.medium"]
+      desired_size   = 4
+      max_size       = 8
+      min_size       = 2
+      disk_size      = 100
+    }
   }
-}
 
-# Connect the EKS cluster OpenID connect URL as a provider
-data "tls_certificate" "openid_cert" {
-  url = aws_eks_cluster.jupyter_cluster.identity.0.oidc.0.issuer
-}
-
-# Extract the name of the EKS cluster auto scaling group for use in connecting to front end
-locals {
-  autoscaling_group_name = lookup(lookup(lookup(aws_eks_node_group.jupyter_cluster_node_group, "resources")[0], "autoscaling_groups")[0], "name")
-}
-
-resource "aws_iam_openid_connect_provider" "eks_openid_provider" {
-  url = aws_eks_cluster.jupyter_cluster.identity[0].oidc[0].issuer
-
-  client_id_list = [ "sts.amazonaws.com" ]
-
-  thumbprint_list = [ data.tls_certificate.openid_cert.certificates.0.sha1_fingerprint ]
 }
 
 output "eks_cluster_name" {
-  value = aws_eks_cluster.jupyter_cluster.name
+  value = module.eks.cluster_name
 }
