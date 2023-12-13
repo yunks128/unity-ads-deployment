@@ -21,13 +21,6 @@ class UnityOAuthenticator(OAuthenticator):
     # login_service is the text displayed on the "Login with..." button
     login_service = "Unity Common Services"
 
-    access_token = ""
-    id_token = ""
-    refresh_token = ""
-    access_token_expires_in = 0
-    app_client_id = ""
-    secret_hash = ""
-
     # Authenticates the user with Cognito
     async def authenticate(self, handler, data=None):
         # Exchange the OAuth code for an Access Token
@@ -54,13 +47,9 @@ class UnityOAuthenticator(OAuthenticator):
         resp_json = json.loads(resp.body.decode('utf8', 'replace'))
 
         if 'access_token' in resp_json:
-            global access_token
             access_token = resp_json['access_token']
-            global id_token
             id_token = resp_json['id_token']
-            global refresh_token
             refresh_token = resp_json['refresh_token']
-            global access_token_expires_in
             access_token_expires_in = resp_json['expires_in']
 
         elif 'error_description' in resp_json:
@@ -87,12 +76,11 @@ class UnityOAuthenticator(OAuthenticator):
             return None
 
         # Calculate secret hash and obtain other variables required to refresh tokens later
-        global app_client_id
         app_client_id = self.client_id
+
         key = self.client_secret
         message = bytes(username + app_client_id,'utf-8')
         key = bytes(key,'utf-8')
-        global secret_hash
         secret_hash = base64.b64encode(hmac.new(key, message, digestmod=hashlib.sha256).digest()).decode()
 
         return {
@@ -102,33 +90,34 @@ class UnityOAuthenticator(OAuthenticator):
                 'id_token': id_token,
                 'refresh_token': refresh_token,
                 'access_token_expires_in': access_token_expires_in,
+                'app_client_id': app_client_id,
+                'secret_hash': secret_hash,
             },
         }
 
 c.JupyterHub.authenticator_class = UnityOAuthenticator
+c.JupyterHub.authenticator_class.enable_auth_state = True
+
+def userdata_hook(spawner, auth_state):
+    "Save auth_state into the spawner"
+
+    spawner.auth_state = auth_state
+
+c.KubeSpawner.auth_state_hook = userdata_hook
 
 # Sets Cognito specific environment variables in the JupyterLab during the spawn
 def modify_pod_hook(spawner, pod):
 
-  global access_token
-  pod.spec.containers[0].env.append({"name": "UNITY_COGNITO_ACCESS_TOKEN", "value": access_token})
+  pod.spec.containers[0].env.append({"name": "UNITY_COGNITO_ACCESS_TOKEN", "value": spawner.auth_state['access_token']})
+  pod.spec.containers[0].env.append({"name": "UNITY_COGNITO_ID_TOKEN", "value": spawner.auth_state['id_token']})
+  pod.spec.containers[0].env.append({"name": "UNITY_COGNITO_REFRESH_TOKEN", "value": spawner.auth_state['refresh_token']})
 
-  global id_token
-  pod.spec.containers[0].env.append({"name": "UNITY_COGNITO_ID_TOKEN", "value": id_token})
-
-  global refresh_token
-  pod.spec.containers[0].env.append({"name": "UNITY_COGNITO_REFRESH_TOKEN", "value": refresh_token})
-
-  global access_token_expires_in
   epoch_seconds = int(time.time())
-  cognito_access_token_expiry = str(access_token_expires_in + epoch_seconds)
+  cognito_access_token_expiry = str(spawner.auth_state['access_token_expires_in'] + epoch_seconds)
   pod.spec.containers[0].env.append({"name": "UNITY_COGNITO_ACCESS_TOKEN_EXPIRY", "value": cognito_access_token_expiry})
 
-  global app_client_id
-  pod.spec.containers[0].env.append({"name": "UNITY_COGNITO_APP_CLIENT_ID", "value": app_client_id})
-
-  global secret_hash
-  pod.spec.containers[0].env.append({"name": "UNITY_COGNITO_SECRET_HASH", "value": secret_hash})
+  pod.spec.containers[0].env.append({"name": "UNITY_COGNITO_APP_CLIENT_ID", "value": spawner.auth_state['app_client_id']})
+  pod.spec.containers[0].env.append({"name": "UNITY_COGNITO_SECRET_HASH", "value": spawner.auth_state['secret_hash']})
 
   return pod
 
