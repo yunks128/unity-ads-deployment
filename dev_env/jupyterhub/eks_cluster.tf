@@ -2,7 +2,7 @@ data "aws_caller_identity" "current" {
 }
 
 data "aws_ssm_parameter" "ami_id" {
-  name = "/mcp/amis/aml2-eks-1-25"
+  name = "/mcp/amis/aml2-eks-1-27"
 }
 
 module "eks" {
@@ -10,7 +10,7 @@ module "eks" {
   version = "~> 19.0"
 
   cluster_name    = "${var.resource_prefix}-${var.tenant_identifier}-jupyter"
-  cluster_version = "1.25"
+  cluster_version = "1.27"
 
   cluster_addons = {
     coredns = {
