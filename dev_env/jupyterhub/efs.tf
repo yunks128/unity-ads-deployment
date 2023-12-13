@@ -38,7 +38,7 @@ resource "kubernetes_storage_class" "efs_storage_class" {
     name = "efs"
   }
   storage_provisioner = "efs.csi.aws.com"
-  reclaim_policy      = "Retain"
+  reclaim_policy      = "Delete"
 
   parameters = {
   }
@@ -61,7 +61,7 @@ resource "kubernetes_persistent_volume" "dev_support_shared_volume" {
       storage = "100Gi"
     }
 
-    persistent_volume_reclaim_policy = "Retain"
+    persistent_volume_reclaim_policy = "Delete"
 
     persistent_volume_source {
       csi {
