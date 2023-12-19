@@ -30,3 +30,12 @@ variable "cognito_oauth_client_secret" {
   description = "Cognito user pool client secret"
   type        = string
 }
+
+# From the shell define a varible with values like this:
+# export TF_VAR_jupyter_s3_buckets='["bucket-name-1", "bucket-name-2"]'
+
+variable "jupyter_s3_buckets" {
+  description = "List of S3 bucket names to allow access from the Jupyter cluster"
+  type        = list(string)
+  default     = []
+}

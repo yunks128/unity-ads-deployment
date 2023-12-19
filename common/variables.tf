@@ -10,16 +10,8 @@ variable "resource_prefix" {
   default     = "uads"
 }
 
-variable "s3_identifier" {
-  description = "String used in S3 bucket names to differentiate them between deployment venues"
-  type        = string
-  # Example value: "dev"
-}
-
 variable "efs_identifier" {
   description = "EFS file system to connect Jupyter shared storage with"
   type        = string
   # Example value:uads-development-efs-fs"
 }
-
-

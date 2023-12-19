@@ -43,6 +43,7 @@ singleuser:
   cloudMetadata:
     blockWithIptables: false
     ip: 169.254.169.254
+  serviceAccountName: s3-access
 hub:
   baseUrl: ${jupyter_base_path}
   extraFiles:
