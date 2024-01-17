@@ -39,3 +39,39 @@ variable "jupyter_s3_buckets" {
   type        = list(string)
   default     = []
 }
+
+variable "jupyter_admin_users" {
+  description = "List of usernames given admin access"
+  type        = list(string)
+  default     = []
+}
+
+variable "eks_node_instance_types" {
+  description = "List of instance types to use for EKS nodes"
+  type        = list(string)
+  default     = ["t3.xlarge", "t3.medium"]
+}
+
+variable "eks_node_disk_size" {
+  description = "Disk size in GiB for nodes."
+  type        = number
+  default     = 100
+}
+
+variable "eks_node_min_size" {
+  description = "Minimum number of instances/nodes"
+  type        = number
+  default     = 2
+}
+
+variable "eks_node_max_size" {
+  description = "Maximum number of instances/nodes"
+  type        = number
+  default     = 8
+}
+
+variable "eks_node_desired_size" {
+  description = "Desired number of instances/nodes"
+  type        = number
+  default     = 4
+}

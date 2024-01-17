@@ -18,6 +18,8 @@ resource "helm_release" "jupyter_helm" {
       jupyter_proxy_port     = var.jupyter_proxy_port
       shared_volume_name     = "${kubernetes_persistent_volume.dev_support_shared_volume.metadata.0.name}"
       unity_auth_py          = base64encode(file("${path.module}/unity_auth.py"))
+      # Use jsencode instead of yamlencode so we always have an inline list instead of the yaml multi-line list
+      admin_users            = jsonencode(var.jupyter_admin_users)
     })
   ]
 

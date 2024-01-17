@@ -52,11 +52,11 @@ module "eks" {
 
   eks_managed_node_groups = {
     jupyter = {
-      instance_types = ["t3.xlarge", "t3.medium"]
-      desired_size   = 4
-      max_size       = 8
-      min_size       = 2
-      disk_size      = 100
+      instance_types = var.eks_node_instance_types
+      disk_size      = var.eks_node_disk_size
+      min_size       = var.eks_node_min_size
+      max_size       = var.eks_node_max_size
+      desired_size   = var.eks_node_desired_size
     }
   }
 
