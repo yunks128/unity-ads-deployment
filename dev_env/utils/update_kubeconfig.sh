@@ -3,6 +3,7 @@
 # Uses AWS to update Kubernetes config file to point to the EKS cluster 
 
 script_dir=$(dirname $0)
+terraform_dir=$(realpath $script_dir/../jupyterhub)
 cd $script_dir
 
 if [ -z "$(which terraform 2>/dev/null)" ]; then
@@ -17,4 +18,4 @@ fi
 
 cd $script_dir
 
-aws eks update-kubeconfig --region us-west-2 --name $(terraform output -raw eks_cluster_name)
+aws eks update-kubeconfig --region us-west-2 --name $(terraform -chdir=$terraform_dir output -raw eks_cluster_name)

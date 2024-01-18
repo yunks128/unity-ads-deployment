@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
 script_dir=$(dirname $0)
+terraform_dir=$(realpath $script_dir/../jupyterhub)
+
 cd $script_dir
 
 output_dir=$1
@@ -15,7 +17,7 @@ if [ ! -e "$output_dir" ]; then
     exit 1
 fi
 
-namespace=$(terraform output -raw kube_namespace)
+namespace=$(terraform -chdir=$terraform_dir output -raw kube_namespace)
 echo "Using Kubernetes namespace: $namespace"
 
 # Find the volume claims for users in the form of 'claim-*'
