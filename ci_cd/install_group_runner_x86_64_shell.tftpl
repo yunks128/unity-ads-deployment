@@ -37,6 +37,14 @@ echo "The account used to set up the environment is `whoami`."
 sudo yum update -y
 
 
+#---------- amazon-linux-extras ----------#
+
+# Amazon linux comes with amazon-linux-extra already pre-installed;
+# however, if needed and not installed, the command to install it is:
+ 
+#sudo yum install -y amazon-linux-extras
+
+
 #---------- download and install binary ----------#
 
 # To register a gitlab executor, we first need to install and start
@@ -112,9 +120,17 @@ sudo /usr/local/bin/gitlab-runner register \
      --tag-list "shell,unity" 
 
 
-#---------- install git ----------#
+#---------- install git and git-lfs ----------#
 
 sudo yum install -y git
+
+#sudo curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.rpm.sh | sudo bash
+# or
+sudo amazon-linux-extras install epel -y
+sudo yum-config-manager --enable epel
+
+sudo yum install -y git-lfs
+sudo git lfs install
 
 
 #---------- install mini-conda ----------#
@@ -173,6 +189,12 @@ su gitlab-runner -c "git clone https://github.com/unity-sds/app-pack-generator.g
 pip3 install app-pack-generator/
 su gitlab-runner -c "git clone https://github.com/unity-sds/unity-app-generator.git"
 pip3 install unity-app-generator/
+
+
+#---------- install unity-app-generator ----------#
+
+cd /home/gitlab-runner
+su gitlab-runner -c "git clone https://github.com/unity-sds/unity-app-build-trigger.git"
 
 
 #---------- install aws cli ----------#
