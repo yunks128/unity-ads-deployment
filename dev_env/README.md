@@ -37,25 +37,24 @@ Deploys these Unity ADS services:
   
 ## Development Environment
 
-For each deployment instance (ie. development, test, production) define the following environment variables to customize the install to the environment. For example for the test deployment you would defined the following variables:
+For each deployment instance (ie. development, test, production) there are environment variables that need customization before proceeding with deployment. The `vars_jupyter.example.sh` contains a template of variables available to define Terraform variables. Copy this file to a new file named `vars_jupyter.sh` then modify as indicated below.
 
+The following variables are required to be defined before proceeding with deployment:
 
 ```
-export TF_VAR_unity_instance="Unity-Test"
-export TF_VAR_tenant_identifier="test"
-export TF_VAR_s3_identifier="test"
-export TF_VAR_efs_identifier="uads-development-efs-fs"
+export TF_VAR_tenant_identifier="example-dev"
+export TF_VAR_efs_identifier="uads-venue-dev-efs-fs"
 ```
 
-The `unity_instance` variable should match the string used in the Unity instance's VPC name as this variable is used to look up the VPC. The `s3_identifier` variable must match the instance string inserted into the names of the instance's Cumulus S3 buckets. The `efs_identifider` variable is used to create the EFS shared storage resource.
+The `tenant_identifier` variable defines a unique string to be used in the deployed resources. It should be unique and descriptive of the current deployment. The `efs_identifier` variable is used to create the EFS shared storage resource that either exists already or will be created during deployment.
 
-Each of the following Development Environment components need to be intialized individually by changing into their respective directory and running Terraform there. The Development Enviroment base directory under the repository is `dev_env/`.
+Each of the following Development Environment components need to be initialized individually by changing into their respective directory and running Terraform there. The Development Environment base directory under the repository is located in the `dev_env/` subdirectory.
 
-The steps below assume that the above environment variables have already been defined.
+The steps below assume that the above environment variables have already been defined. Additionally, you will need to ensure that AWS has access to the venue account.
 
 ### EFS Shared Storage
 
-Shared storage must be installed prior to initalizing Jupterlab. The Terraform scripts in this directory create an EFS server for Jupyterhub intended to host files common to all users. These scripts are seperated out from the Jupyterhub installation scripts to enable removing and rebuilding the Jupyterhubz instance without deleting the EFS stored files.
+Shared storage must be installed prior to initializing Jupterhub. The Terraform scripts in this directory create an EFS server for Jupyterhub intended to host files common to all users. These scripts are separated out from the Jupyterhub installation scripts to enable removing and rebuilding the Jupyterhub instance without deleting the EFS stored files.
 
 1. Change to the `dev_env/shared_storage` directory
 2. Run `terraform init`
@@ -63,51 +62,47 @@ Shared storage must be installed prior to initalizing Jupterlab. The Terraform s
 
 ### Cognito Initial Setup
 
-The connection of the Juptyterhub instance to the Unity Cognito Authentication requires running commands from the `cognito` directory twice.
+The connection of the Juptyterhub instance to the Unity Cognito Authentication requires running commands from the `cognito` directory twice. This deployment should be run connecting to the appropriate shared services AWS account instead of the venue's AWS account.
 
 The initial set up will generate a Cognito application client along with the client id and secret necessary for feeding into the Jupyterhub deployment.
 
-1. Change to the `dev_env/cognito` directory
-2. Run `terraform init`
-3. Run `terraform apply`
+1. Set AWS credentials in a separate window from the venue deployment to the appropriate shared services credentials
+2. Change to the `dev_env/cognito` directory
+3. Run `terraform init`
+4. Run `terraform apply`
 
-Once Terraform has finished succesfully run the following to bring the Cognito id and secret into environment variables required in the next step.
-
-```
-$ eval $(./cognito_config_envs.sh)
-```
-
-Run the following to verify that the environment variables were succesfully set up:
+Once Terraform has finished successfully run the following to display the Cognito id and secret into environment variables to be used by Juptyerhub.
 
 ```
-$ env | grep TF_VAR_cogn
+$ ./cognito_config_envs.sh
 ```
 
-Note that the Cognito resource could exist in a seperate venue from the Jupyterhub instance.
+Copy the output of this script into your `vars_jupyter.sh` script to replace the uninitialized values from the template. Make sure you reevaluate the `vars_jupyter.sh` script from your venue deployment window.
 
 ### Jupyterhub
 
 Jupyterhub must be installed after the EFS shared storage Terraform scripts and Cognito initial step have been run. 
 
 1. Change to the `dev_env/jupyterhub` directory
-2. Run `terraform init`
-3. Run `terraform apply`
+2. Reevaluate the `vars_jupyter.sh` script modified in the last step to include the Cognito variable values.
+3. Run `terraform init`
+4. Run `terraform apply`
 
-For the above steps it is recommended to keep the `KUBE_CONFIG_PATH` environment variable unset, or else the EKS system within Terraform might get confused by trying to access a non-existent cluster if this is the first time this particular cluster has been set up and you have multiple clusters listed in your Kubernetes config file.
+If this is the first time this particular cluster has been deployed and you have multiple clusters listed in your Kubernetes config file, it is recommended to keep the `KUBE_CONFIG_PATH` environment variable unset. This avoids an issue with the EKS system within Terraform getting confused by trying to access a non-existent cluster .
 
-Two useful variables are output from the Terraform execution:
+The following useful variables are output from the Terraform execution:
 
 * jupyter\_base\_uri - The URL used to log into the Jupyterhub cluster
 * eks_cluster_name - The name of the generated EKS cluster
 * kube_namespace - The namespace used with `kubectl` for investigating the EKS cluster
 
-But after successfully running the Terraform script for this directory for the first time, for subsequent runs to update changes to the Terraform scripts you must define the `KUBE_CONFIG_PATH` environment variable:
+After successfully running the Terraform script for this directory for the first time, for subsequent runs of the Terraform scripts, you must define the `KUBE_CONFIG_PATH` environment variable:
 
 ```
 export KUBE_CONFIG_PATH=$HOME/.kube/config
 ```
 
-Run the `update_kube_config.sh` script to use the generated EKS cluster name from Terraform to create a new entry in the Kubernetes config file to allow use of the kubectl command for querying the cluster.
+Next, run the `update_kube_config.sh` script to use the generated EKS cluster name from Terraform to create a new entry in the Kubernetes config file to allow the use of the kubectl command for querying the cluster.
 
 Now you can query the status of the cluster nodes as follows:
 
@@ -125,7 +120,7 @@ Where `$pod_id` comes from the output of the `get pods` command.
 
 ### Cognito Final Setup
 
-Change back to the `cognito` directory to run the following sequence to publish the Jupyterhub callback URL to Cognito:
+Change back to the command prompt using the shared services AWS credentials. In the `cognito` directory run the following sequence to publish the Jupyterhub callback URL to Cognito:
 
 ```
 $ eval $(./jupyter_uri_env.sh)
@@ -137,7 +132,7 @@ Now that the `TF_VAR_jupyter_base_url` variable has been defined the Terraform p
 
 ### Test Jupyterhub
 
-Now to test Jupyterhub installation by navigating to the URL from the `jupyter_base_uri` output from the `jupyterhub` directory.
+Now to test Jupyterhub installation by navigating to the URL from the `jupyter_base_uri` Terraform output from the `jupyterhub` directory.
 
 ### EC2 Support Instance
 
