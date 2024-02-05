@@ -123,7 +123,7 @@ Where `$pod_id` comes from the output of the `get pods` command.
 Change back to the command prompt using the shared services AWS credentials. In the `cognito` directory run the following sequence to publish the Jupyterhub callback URL to Cognito:
 
 ```
-$ eval $(./jupyter_uri_env.sh)
+$ eval $(./jupyter_url_env.sh)
 $ env | grep TF_VAR_jupyter_base_url
 $ terraform apply 
 ```
