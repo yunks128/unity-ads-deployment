@@ -4,10 +4,8 @@
 # Debugging steps:
 # https://docs.aws.amazon.com/eks/latest/userguide/associate-service-account-role.html
 
-resource "aws_iam_policy" "s3_access_policy" {
-  name = "Unity-ADS-${var.tenant_identifier}-JupyterS3Policy"
-
-  policy = jsonencode({
+locals {
+    s3_buckets_policy = jsonencode({
     "Version": "2012-10-17",
     "Statement": [
         {
@@ -25,6 +23,23 @@ resource "aws_iam_policy" "s3_access_policy" {
       ]
    })
 
+   empty_policy = jsonencode({
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": "none:null",
+            "Resource": "*"
+        }
+      ]
+   })
+}
+
+resource "aws_iam_policy" "s3_access_policy" {
+  name = "Unity-ADS-${var.tenant_identifier}-JupyterS3Policy"
+
+  # If no s3 buckets are defined in the variable supply a dummy policy
+  policy = length(var.jupyter_s3_buckets) > 0 ?  local.s3_buckets_policy : local.empty_policy
 }
 
 module "s3_irsa_role" {
