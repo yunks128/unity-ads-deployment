@@ -3,7 +3,7 @@ provider "aws" {
     tags = {
       ServiceArea = "аds"
       Proj = "unity"
-      Venue = "${var.resource_prefix}"
+      Venue = "${var.tenant_identifier}"
       Component = "${var.component_cost_name}"
       CreatedBy = "ads"
       Env = "${var.resource_prefix}"
