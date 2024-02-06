@@ -48,6 +48,9 @@ module "eks" {
     pre_bootstrap_user_data = <<-EOT
       sudo sed -i 's/^net.ipv4.ip_forward = 0/net.ipv4.ip_forward = 1/' /etc/sysctl.conf && sudo sysctl -p |true
     EOT
+
+    # Ensure that cost tags are applied to dynamically allocated resources
+    launch_template_tags = local.cost_tags
   }
 
   eks_managed_node_groups = {
