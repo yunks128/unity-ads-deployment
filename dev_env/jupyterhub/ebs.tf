@@ -7,17 +7,11 @@ resource "kubernetes_storage_class" "ebs_storage_class" {
   storage_provisioner = "ebs.csi.aws.com"
   reclaim_policy      = "Retain"
 
-  parameters = {
-    fsType = "ext4"
-    type = "gp2"
-
-    tagSpecification_1 = "ServiceArea=аds"
-    tagSpecification_2 = "Proj=unity"
-    tagSpecification_3 = "Venue=${var.tenant_identifier}"
-    tagSpecification_4 = "Component=${var.component_cost_name}"
-    tagSpecification_5 = "CreatedBy=ads"
-    tagSpecification_6 = "Env=${var.resource_prefix}"
-    tagSpecification_7 = "Stack=${var.component_cost_name}"
-  }
-
+  parameters = merge({
+      fsType = "ext4"
+      type = "gp2"
+    }, 
+    # How to add custom tags to ebs-csi deployed volumes
+    # https://github.com/kubernetes-sigs/aws-ebs-csi-driver/blob/master/docs/tagging.md
+    { for i, k in keys(local.cost_tags) : "tagSpecification_${i}" => "${k}=${local.cost_tags[k]}" })
 }

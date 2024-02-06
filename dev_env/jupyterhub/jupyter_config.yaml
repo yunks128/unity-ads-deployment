@@ -33,6 +33,9 @@ singleuser:
       kubespawner_override:
         image: public.ecr.aws/unity-ads/sounder_sips_dev:r0.1.0
   storage:
+    # Use our storage class for dynamic user volumes allow application of cost tags
+    dynamic:
+      storageClass: ebs
     extraVolumes:
       - name: ${shared_volume_name}
         persistentVolumeClaim:
@@ -45,6 +48,10 @@ singleuser:
     ip: 169.254.169.254
   serviceAccountName: s3-access
 hub:
+  # Use our storage class for hub database to allow application of cost tags
+  db:
+    pvc: 
+      storageClassName: ebs
   baseUrl: ${jupyter_base_path}
   extraFiles:
     unity_auth:
