@@ -13,7 +13,7 @@ resource "aws_efs_access_point" "jupyter_shared" {
     path = "/shared"
     creation_info {
        owner_uid = 0
-       owner_gid = 0
+       owner_gid = 100
        permissions = 775
     }
   }
