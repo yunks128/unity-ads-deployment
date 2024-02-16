@@ -19,10 +19,10 @@ singleuser:
     name: jupyter/base-notebook
     tag: latest
   profileList:
-    - display_name: "Unity - Datascience Environment (v0.2.2)"
+    - display_name: "Unity - Datascience Environment (v0.2.3)"
       description: "Extends Jupyter datascience environment to include the Dockstore client and AWS client"
       kubespawner_override:
-        image: ghcr.io/unity-sds/unity-docker-stacks/unity_datascience:0.2.2
+        image: ghcr.io/unity-sds/unity-docker-stacks/unity_datascience:0.2.3
       default: true
     - display_name: "Jupyter - Minimal environment"
       description: "To avoid too much bells and whistles: Python."
@@ -43,6 +43,11 @@ singleuser:
     extraVolumeMounts:
       - name: ${shared_volume_name}
         mountPath: /unity/ads
+  lifecycleHooks:
+    postStart:
+      exec:
+        # Populate user environment with configuration files, but do not overwrite existing
+        command: ["sh", "-c", "if [ -e /etc/unity-sds/init_user.sh ]; then /etc/unity-sds/init_user.sh ; fi"]
   cloudMetadata:
     blockWithIptables: false
     ip: 169.254.169.254
