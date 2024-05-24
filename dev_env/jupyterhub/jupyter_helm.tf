@@ -13,6 +13,7 @@ resource "helm_release" "jupyter_helm" {
       cognito_oauth_base_url = var.cognito_oauth_base_url
       oauth_client_id        = var.cognito_oauth_client_id
       oauth_client_secret    = var.cognito_oauth_client_secret
+      oauth_callback_url     = module.frontend.jupyter_base_path != "" ? "${module.frontend.jupyter_base_url}/${module.frontend.jupyter_base_path}/hub/oauth_callback" : "${module.frontend.jupyter_base_url}/hub/oauth_callback"
       jupyter_base_path      = module.frontend.jupyter_base_path != "" ? "/${module.frontend.jupyter_base_path}/" : "/"
       jupyter_base_url       = module.frontend.jupyter_base_url
       jupyter_proxy_port     = var.jupyter_proxy_port

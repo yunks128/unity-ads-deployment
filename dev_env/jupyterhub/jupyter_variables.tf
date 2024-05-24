@@ -16,6 +16,22 @@ variable "jupyter_proxy_port" {
   default    = 32232
 }
 
+# Public facing URL minus jupyter_base_path
+# Do not supply trailing slashes
+variable "jupyter_base_url" {
+  description = "Base URL minus path for Jupyter as accessed at its public facing location"
+  type       = string
+  default    = null
+}
+
+# Base path for jupyter appended to base path of frontend module
+# Do not supply leading or trailing slashes
+variable "jupyter_base_path" {
+  description = "Base path for Jupyter as accessed at its public facing location"
+  type       = string
+  default    = ""
+}
+
 variable "cognito_oauth_base_url" {
   description = "Base URL for using the Cognito Open Auth 2 interface"
   type        = string

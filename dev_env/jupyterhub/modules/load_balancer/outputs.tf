@@ -1,7 +1,7 @@
 output "jupyter_base_path" {
-  value = ""
+  value = var.jupyter_base_path
 }
 
 output "jupyter_base_url" {
-  value = "https://${aws_lb.jupyter_alb.dns_name}:${var.load_balancer_port}"
+  value = var.jupyter_base_url != null ? var.jupyter_base_url : "https://${aws_lb.jupyter_alb.dns_name}:${var.load_balancer_port}"
 }

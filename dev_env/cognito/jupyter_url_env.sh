@@ -13,5 +13,7 @@ fi
 cd $(realpath $script_dir/..)/jupyterhub
 
 jupyter_url=$(terraform output -raw jupyter_base_url)
+jupyter_url=$(terraform output -raw jupyter_base_path)
 
 echo "export TF_VAR_jupyter_base_url=\"${jupyter_url}\""
+echo "export TF_VAR_jupyter_base_path=\"${jupyter_path}\""

@@ -22,6 +22,20 @@ variable "jupyter_proxy_port" {
   type       = number
 }
 
+# Do not supply trailing slashes
+variable "jupyter_base_url" {
+  description = "Base URL minus path for Jupyter as accessed at its public facing location"
+  type       = string
+  default    = null
+}
+
+# Do not include leading or training slashes
+variable "jupyter_base_path" {
+  description = "Base path for Jupyter as accessed at its public facing location"
+  type       = string
+  default    = ""
+}
+
 ###################################
 # Frontend module common variables
 

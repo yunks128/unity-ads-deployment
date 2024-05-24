@@ -64,7 +64,7 @@ hub:
       binaryData: ${unity_auth_py}
   config:
     OAuthenticator:
-      oauth_callback_url: ${jupyter_base_url}/hub/oauth_callback
+      oauth_callback_url: ${oauth_callback_url}
       client_id: ${oauth_client_id}
       client_secret: ${oauth_client_secret}
       admin_users: ${admin_users}

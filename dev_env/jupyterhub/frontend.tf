@@ -36,6 +36,9 @@ module "frontend" {
   load_balancer_port = var.load_balancer_port
   jupyter_proxy_port = var.jupyter_proxy_port
 
+  jupyter_base_url = var.jupyter_base_url
+  jupyter_base_path = var.jupyter_base_path
+
   vpc_id = data.aws_ssm_parameter.vpc_id.value
   lb_subnet_ids = local.subnet_map["public"]
   security_group_id = aws_security_group.jupyter_lb_sg.id

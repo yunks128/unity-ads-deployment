@@ -6,8 +6,8 @@ resource "aws_cognito_user_pool_client" "jupyter_cognito_client" {
   name          = "${var.resource_prefix}-jupyter-${var.tenant_identifier}-client"
   user_pool_id  = tolist(data.aws_cognito_user_pools.unity_user_pool.ids)[0]
 
-  callback_urls = var.jupyter_base_url != null ? ["${var.jupyter_base_url}/hub/oauth_callback"] : null
-  logout_urls   = var.jupyter_base_url != null ? ["${var.jupyter_base_url}/hub/login/oauth_callback/logout"] : null
+  callback_urls = var.jupyter_base_url != null ? ["${var.jupyter_base_url}/${var.jupyter_base_path}/hub/oauth_callback"] : null
+  logout_urls   = var.jupyter_base_url != null ? ["${var.jupyter_base_url}/${var.jupyter_base_path}/hub/login/oauth_callback/logout"] : null
 
   allowed_oauth_flows                           = var.jupyter_base_url != null ? ["code"] : null
   allowed_oauth_flows_user_pool_client          = var.jupyter_base_url != null ? true : null
