@@ -63,6 +63,8 @@ hub:
       mountPath: /usr/local/etc/jupyterhub/jupyterhub_config.d/unity_auth.py
       binaryData: ${unity_auth_py}
   config:
+    Authenticator:
+      auto_login: true
     OAuthenticator:
       oauth_callback_url: ${oauth_callback_url}
       client_id: ${oauth_client_id}
