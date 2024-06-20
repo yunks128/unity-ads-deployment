@@ -105,8 +105,8 @@ def lambda_handler(event, context):
         print('No clone_url')
         
     cuser, cgroups = get_end_user_info(event)
-    
-    if cuser == None:
+    no_subgroup = True 
+    if (cuser == None) or no_subgroup:
         curl_cmd_p = 'curl -X POST --fail ' \
             '-F token={0} ' \
             '-F "ref=main" ' \
