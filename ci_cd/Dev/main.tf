@@ -334,7 +334,7 @@ resource "aws_instance" "gl_runner_instance" {
   # Download and install gitlab runner
   #
   user_data = templatefile("../install_group_runner_${var.gl_runner_architecture}_${each.key}.tftpl",
-  { token = "${var.gl_runner_registration_token}", name = "${var.gl_runner_base_name}-${each.key}" })
+  { token = "${var.gl_runner_registration_token}", name = lower("${var.gl_runner_base_name}-${local.unity_venue}-${each.key}") })
 
   tags = {
     Name = "${var.gl_runner_instance_base_name}-${each.key}"
