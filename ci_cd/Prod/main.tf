@@ -457,9 +457,17 @@ resource "aws_api_gateway_method" "mcp_clone" {
   resource_id   = aws_api_gateway_resource.mcp_clone.id
   http_method   = "GET"
   
-  authorization = "NONE"
-#  authorization = "COGNITO_USER_POOLS"
-#  authorizer_id = data.aws_api_gateway_authorizer.unity_api.id
+  authorization = "CUSTOM" 
+  authorizer_id = data.aws_api_gateway_authorizer.unity_api.id
+
+  # A map of request query string parameters and headers that
+  # should be passed to the integration. For example, the
+  # following defines that the header Authorization  must be
+  # provided on the request.
+  #
+  request_parameters = {
+    "method.request.header.Authorization" = true
+  }
 }
 #
 resource "aws_api_gateway_integration" "integration" {
@@ -478,6 +486,26 @@ resource "aws_api_gateway_method_response" "response_200" {
   http_method = aws_api_gateway_method.mcp_clone.http_method
   status_code = "200"
 }
+#
+resource "aws_api_gateway_deployment" "mcp_clone" {
+  rest_api_id = data.aws_api_gateway_rest_api.unity_rest_api.id
+  stage_name    = lower(local.unity_venue)
+
+  triggers = {
+    redeployment = sha1(jsonencode([
+      aws_api_gateway_resource.ads_acb.id,
+      aws_api_gateway_resource.mcp_clone.id,
+      aws_api_gateway_method.mcp_clone.id,
+      aws_api_gateway_integration.integration.id,
+      aws_api_gateway_method_response.response_200.id,
+    ]))
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
 
 
 # OUTPUT
@@ -524,4 +552,9 @@ output "unity_rest_api_authorizer_name" {
 output "unity_rest_api_authorizer_id" {
   description = "Unity API authorizer id"
   value       = data.aws_api_gateway_authorizer.unity_api.id
+}
+
+output "unity_rest_api_authorizer_type" {
+  description = "Unity API authorizer type"
+  value       = data.aws_api_gateway_authorizer.unity_api.type
 }
