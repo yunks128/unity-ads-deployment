@@ -10,10 +10,10 @@ if [ -z "$(which terraform 2>/dev/null)" ]; then
     exit 1
 fi
 
-cd $(realpath $script_dir/..)/jupyterhub
+terraform_dir=$(realpath $script_dir/..)/jupyterhub
 
-jupyter_url=$(terraform output -raw jupyter_base_url)
-jupyter_url=$(terraform output -raw jupyter_base_path)
+jupyter_url=$(terraform -chdir=$terraform_dir output -raw jupyter_base_url)
+jupyter_path=$(terraform -chdir=$terraform_dir output -raw jupyter_base_path)
 
 echo "export TF_VAR_jupyter_base_url=\"${jupyter_url}\""
 echo "export TF_VAR_jupyter_base_path=\"${jupyter_path}\""
