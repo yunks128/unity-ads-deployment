@@ -28,10 +28,6 @@ singleuser:
       description: "To avoid too much bells and whistles: Python."
       kubespawner_override:
         image: jupyter/base-notebook:latest
-    - display_name: "Unity - Sounder SIPS Development Environment"
-      description: "Packages and tools replicating the JPL Sounder SIPS development environment"
-      kubespawner_override:
-        image: public.ecr.aws/unity-ads/sounder_sips_dev:r0.1.0
   storage:
     # Use our storage class for dynamic user volumes allow application of cost tags
     dynamic:
