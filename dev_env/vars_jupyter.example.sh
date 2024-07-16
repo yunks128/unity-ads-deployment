@@ -3,7 +3,10 @@ export AWS_PROFILE=mcp-venue-dev
 export KUBE_CONFIG_PATH=$HOME/.kube/config
 
 # Required to be set before beginning installation
-export TF_VAR_tenant_identifier="example-dev"
+export TF_VAR_project="unity"
+export TF_VAR_venue="dev"
+export TF_VAR_venue_prefix="venue-"
+
 export TF_VAR_efs_identifier="uads-venue-dev-efs-fs"
 
 # Can be determined automatically during installation process or supplied ahead of time

@@ -2,18 +2,18 @@
 # Application Load Balancer connecting to the EKS cluster
 
 resource "aws_lb" "jupyter_alb" {
-  name               = "jupyter-${var.tenant_identifier}-alb"
+  name               = "jupyter-${var.venue_prefix}${var.venue}-alb"
   load_balancer_type = "application"
   security_groups    = [ var.security_group_id ]
   subnets            = var.lb_subnet_ids
 
   tags = {
-    Name = "${var.resource_prefix}-${var.tenant_identifier}-jupyter-alb"
+    Name = "${var.resource_prefix}-${var.venue_prefix}${var.venue}-jupyter-alb"
   }
 }
 
 resource "aws_lb_target_group" "jupyter_alb_target_group" {
-  name        = "jupyter-${var.tenant_identifier}-alb-tg"
+  name        = "jupyter-${var.venue_prefix}${var.venue}-alb-tg"
   target_type = "instance"
   vpc_id      = var.vpc_id
 
@@ -21,7 +21,7 @@ resource "aws_lb_target_group" "jupyter_alb_target_group" {
   port             = var.jupyter_proxy_port
 
   tags = {
-    name = "${var.resource_prefix}-${var.tenant_identifier}-alb-target-group"
+    name = "${var.resource_prefix}-${var.venue_prefix}${var.venue}-alb-target-group"
   }
 
   # alter the destination of the health check
@@ -42,8 +42,8 @@ resource "tls_self_signed_cert" "jupyter_alb_certificate_data" {
   dns_names = [ aws_lb.jupyter_alb.dns_name ]
 
   subject {
-    common_name  = "Unity ${var.tenant_identifier} JupyterHub"
-    organization = "${var.resource_prefix}-${var.tenant_identifier}"
+    common_name  = "Unity ${var.venue_prefix}${var.venue} JupyterHub"
+    organization = "${var.resource_prefix}-${var.venue_prefix}${var.venue}"
   }
 
   # About half a year
@@ -68,7 +68,7 @@ resource "random_id" "cert" {
 
 # For example, this can be used to populate an AWS IAM server certificate.
 resource "aws_iam_server_certificate" "jupyter_alb_server_certificate" {
-  name             = "Unity-${var.tenant_identifier}-JupyterHub-Certificate-${random_id.cert.hex}"
+  name             = "Unity-${var.venue_prefix}${var.venue}-JupyterHub-Certificate-${random_id.cert.hex}"
   certificate_body = tls_self_signed_cert.jupyter_alb_certificate_data.cert_pem
   private_key      = tls_private_key.jupyter_priv_key.private_key_pem
 
@@ -84,7 +84,7 @@ resource "aws_lb_listener" "jupyter_alb_listener" {
   certificate_arn  = aws_iam_server_certificate.jupyter_alb_server_certificate.arn
 
   tags = {
-    Name = "${var.resource_prefix}-${var.tenant_identifier}-alb-listener"
+    Name = "${var.resource_prefix}-${var.venue_prefix}${var.venue}-alb-listener"
   }
 
   default_action {

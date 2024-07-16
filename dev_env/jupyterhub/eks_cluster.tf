@@ -9,7 +9,7 @@ module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 19.0"
 
-  cluster_name    = "${var.resource_prefix}-${var.tenant_identifier}-jupyter"
+  cluster_name    = "${var.resource_prefix}-${var.venue_prefix}${var.venue}-jupyter"
   cluster_version = "1.30"
 
   cluster_addons = {
@@ -31,14 +31,14 @@ module "eks" {
   enable_irsa = true
 
   create_iam_role = true
-  iam_role_name = "Unity-ADS-${var.tenant_identifier}-EKSClusterRole"
+  iam_role_name = "Unity-ADS-${var.venue_prefix}${var.venue}-EKSClusterRole"
   iam_role_permissions_boundary = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/mcp-tenantOperator-AMI-APIG"
 
   cluster_endpoint_public_access = true
 
   eks_managed_node_group_defaults = {
     create_iam_role = true
-    iam_role_name = "Unity-ADS-${var.tenant_identifier}-EKSNodeRole"
+    iam_role_name = "Unity-ADS-${var.venue_prefix}${var.venue}-EKSNodeRole"
     iam_role_permissions_boundary = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/mcp-tenantOperator-AMI-APIG"
 
     ami_id          = data.aws_ssm_parameter.ami_id.value

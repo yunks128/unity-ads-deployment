@@ -2,8 +2,18 @@
 # Jupyterlab common variables
 # These come from the top level variables
 
-variable "tenant_identifier" {
-  description = "String identifying the tenant for which resources are created, string inserted into generated resource names"
+variable "project" {
+  description = "The name of the project matching the /unity/<{project>/<venue</project-name SSM parameter"
+  type        = string
+}
+
+variable "venue" {
+  description = "The name of the unity venue matching the /unity/<project>/<venue>/venue-name SSM parameter"
+  type        = string
+}
+
+variable "venue_prefix" {
+  description = "Optional string to place before the venue name in resource names"
   type        = string
 }
 

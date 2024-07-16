@@ -1,8 +1,8 @@
 locals {
   cost_tags = {
     ServiceArea = "аds"
-    Proj = "unity"
-    Venue = "${var.tenant_identifier}"
+    Proj = "${var.project}"
+    Venue = "${var.venue_prefix}${var.venue}"
     Component = "${var.component_cost_name}"
     CreatedBy = "ads"
     Env = "${var.resource_prefix}"

@@ -2,18 +2,18 @@
 # Network Load Balancer connecting EKS cluster to API Gateway
 
 resource "aws_lb" "jupyter_nlb" {
-  name               = "jupyter-${var.tenant_identifier}-nlb"
+  name               = "jupyter-${var.venue_prefix}${var.venue}-nlb"
   load_balancer_type = "network"
   security_groups    = [ var.security_group_id ]
   subnets            = var.lb_subnet_ids
 
   tags = {
-    Name = "/${var.resource_prefix}-${var.tenant_identifier}-jupyter-nlb"
+    Name = "/${var.resource_prefix}-${var.venue_prefix}${var.venue}-jupyter-nlb"
   }
 }
 
 resource "aws_lb_target_group" "jupyter_nlb_target_group" {
-  name        = "jupyter-${var.tenant_identifier}-nlb-tg"
+  name        = "jupyter-${var.venue_prefix}${var.venue}-nlb-tg"
   target_type = "instance"
   vpc_id      = var.vpc_id
 
@@ -21,7 +21,7 @@ resource "aws_lb_target_group" "jupyter_nlb_target_group" {
   port             = var.jupyter_proxy_port
 
   tags = {
-    name = "${var.resource_prefix}-${var.tenant_identifier}-alb-target-group"
+    name = "${var.resource_prefix}-${var.venue_prefix}${var.venue}-alb-target-group"
   }
 
   # alter the destination of the health check
@@ -37,7 +37,7 @@ resource "aws_lb_listener" "jupyter_nlb_listener" {
   protocol          = "TCP"
 
   tags = {
-    Name = "${var.resource_prefix}-${var.tenant_identifier}-nlb-listener"
+    Name = "${var.resource_prefix}-${var.venue_prefix}${var.venue}-nlb-listener"
   }
 
   default_action {
@@ -57,8 +57,8 @@ resource "aws_autoscaling_attachment" "nlb_autoscaling_attachment" {
 # VPC Link to Jupyter NLB
 
 resource "aws_api_gateway_vpc_link" "api_lb_link" {
-  name        = "jupyter-${var.tenant_identifier}-vpc-link"
-  description = "VPC Link to ${var.tenant_identifier} Jupyter NLB"
+  name        = "jupyter-${var.venue_prefix}${var.venue}-vpc-link"
+  description = "VPC Link to ${var.venue_prefix}${var.venue} Jupyter NLB"
   target_arns = [aws_lb.jupyter_nlb.arn]
 
   # Need to wait for NLB

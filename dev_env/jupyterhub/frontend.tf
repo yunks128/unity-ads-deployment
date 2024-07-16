@@ -14,7 +14,9 @@
 # module "frontend" {
 #   source = "./modules/api_gateway"
 # 
-#   tenant_identifier = var.tenant_identifier
+#   project = var.project
+#   venue = var.venue
+#   venue_prefix = var.venue_prefix
 #   resource_prefix = var.resource_prefix
 #   load_balancer_port = var.load_balancer_port
 #   jupyter_proxy_port = var.jupyter_proxy_port
@@ -31,7 +33,9 @@
 module "frontend" {
   source = "./modules/load_balancer"
 
-  tenant_identifier = var.tenant_identifier
+  project = var.project
+  venue = var.venue
+  venue_prefix = var.venue_prefix
   resource_prefix = var.resource_prefix
   load_balancer_port = var.load_balancer_port
   jupyter_proxy_port = var.jupyter_proxy_port
