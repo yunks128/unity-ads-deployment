@@ -18,8 +18,8 @@ resource "aws_security_group" "jupyter_lb_sg" {
 
   # Allow from variable defined input port
   ingress {
-    from_port   = "${var.load_balancer_port}"
-    to_port     = "${var.load_balancer_port}"
+    from_port   = "${local.load_balancer_port}"
+    to_port     = "${local.load_balancer_port}"
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
