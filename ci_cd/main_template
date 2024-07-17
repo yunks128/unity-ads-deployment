@@ -80,7 +80,7 @@ locals {
 variable "app_pack_gen_version" {
   description = "The version (tag) of app-pack-generator to install"
   type        = string
-  default     = "0.3.0"
+  default     = "0.4.0"
 }
 
 variable "unity_app_gen_version" {
