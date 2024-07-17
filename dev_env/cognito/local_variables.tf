@@ -9,3 +9,9 @@ variable "jupyter_base_url" {
   type        = string
   default     = null
 }
+
+variable "jupyter_base_path" {
+  description = "Base path after URL of the JupyterHub instance"
+  type        = string
+  default     = null
+}

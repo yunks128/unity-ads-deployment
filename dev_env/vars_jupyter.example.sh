@@ -11,6 +11,11 @@ export TF_VAR_cognito_oauth_base_url="https://unitysds.auth.us-west-2.amazoncogn
 export TF_VAR_cognito_oauth_client_id=""
 export TF_VAR_cognito_oauth_client_secret=""
 
+# Public facing URL and path after that URL for routing
+# If not supplied then the internal ALB is used
+#export TF_VAR_jupyter_base_url="https://www.dev.mdps.mcp.nasa.gov:4443"
+#export TF_VAR_jupyter_base_path="unity/dev/jupyter"
+
 # Optional, these are Terraform arrays defined as strings, please follow the syntax in the
 # examples below
 #export TF_VAR_jupyter_s3_buckets='["bogus-bucket-name-1", "bogus-bucket-name-2"]'

@@ -26,7 +26,7 @@ resource "aws_lb_target_group" "jupyter_alb_target_group" {
 
   # alter the destination of the health check
   health_check {
-    path = "/hub/health"
+    path = var.jupyter_base_path != "" ? "/${var.jupyter_base_path}/hub/health" : "/hub/health"
     port = var.jupyter_proxy_port
   }
 }
