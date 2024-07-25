@@ -30,15 +30,19 @@
 #################################################################
 # Set up these data values to allow overriding of values by variables
 
-data "aws_ssm_parameter" proxy_url {
-  name = "/unity/${var.project}/${var.venue}/management/httpd/loadbalancer-url"
+data "aws_ssm_parameter" "ssAcctNum" {
+  name = "/unity/shared-services/aws/account"
+}
+
+data "aws_ssm_parameter" "proxy_url" {
+  name = "arn:aws:ssm:us-west-2:${data.aws_ssm_parameter.ssAcctNum.value}:parameter/unity/shared-services/domain"
 }
 
 locals {
   # Extract info on the proxy from the SSM parameter
-  proxy_proto         = lower(replace(regex("[[:alpha:]]+://", data.aws_ssm_parameter.proxy_url.value), "://", ""))
-  proxy_address       = replace(replace(replace(data.aws_ssm_parameter.proxy_url.value, "/[[:alpha:]]+:///", ""), "//.*$/", ""), "/:.*$/", "")
-  proxy_port          = replace(replace(replace(data.aws_ssm_parameter.proxy_url.value, "/[[:alpha:]]+:///", ""), "//.*$/", ""), "/^.*:/", "")
+  proxy_proto         = "https"
+  proxy_address       = data.aws_ssm_parameter.proxy_url.value
+  proxy_port          = 4443
 
   # Allow overriding from variables
   url_terminus_path  = "jupyter"
@@ -77,8 +81,8 @@ resource "aws_ssm_parameter" "serviceproxy_config" {
   name       = "/unity/${var.project}/${var.venue}/cs/management/proxy/configurations/042-jupyterlab"
   type       = "String"
   value       = <<-EOT
-
-    <Location /${local.url_terminus_path}>
+    #SSLProxyEngine on
+    <Location /${var.project}/${var.venue}/${local.url_terminus_path}>
       Header always set Strict-Transport-Security "max-age=63072000"
       ProxyPass "${module.frontend.internal_base_url}/${local.jupyter_base_path}" upgrade=websocket
       ProxyPassReverse "${module.frontend.internal_base_url}/${local.jupyter_base_path}"
