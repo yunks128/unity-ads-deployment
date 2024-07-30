@@ -81,7 +81,7 @@ resource "aws_ssm_parameter" "serviceproxy_config" {
   name       = "/unity/${var.project}/${var.venue}/cs/management/proxy/configurations/042-jupyterlab"
   type       = "String"
   value       = <<-EOT
-    #SSLProxyEngine on
+    SSLProxyEngine on
     <Location /${var.project}/${var.venue}/${local.url_terminus_path}>
       Header always set Strict-Transport-Security "max-age=63072000"
       ProxyPass "${module.frontend.internal_base_url}/${local.jupyter_base_path}" upgrade=websocket
