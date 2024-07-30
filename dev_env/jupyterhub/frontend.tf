@@ -69,7 +69,7 @@ module "frontend" {
   jupyter_base_path = local.jupyter_base_path
 
   vpc_id = data.aws_ssm_parameter.vpc_id.value
-  lb_subnet_ids = local.subnet_map["public"]
+  lb_subnet_ids = local.subnet_map["private"]
   security_group_id = aws_security_group.jupyter_lb_sg.id
   autoscaling_group_name = module.eks.eks_managed_node_groups_autoscaling_group_names[0]
 }
