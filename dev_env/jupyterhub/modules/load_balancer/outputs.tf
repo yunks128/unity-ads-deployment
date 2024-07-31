@@ -7,5 +7,5 @@ output "jupyter_base_url" {
 }
 
 output "internal_base_url" {
-  value = "https://${aws_lb.jupyter_alb.dns_name}:${var.load_balancer_port}"
+  value = "http://${aws_lb.jupyter_alb.dns_name}:${var.load_balancer_port}"
 }

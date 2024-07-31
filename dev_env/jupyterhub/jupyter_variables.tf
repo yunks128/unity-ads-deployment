@@ -6,7 +6,7 @@ variable "component_cost_name" {
 variable "load_balancer_port" {
   description = "Incoming port where load balancer will accept traffic"
   type       = number
-  default    = null
+  default    = 8080
 }
 
 # Should be an integer between 30000 and 32767
