@@ -23,7 +23,7 @@ locals {
 
   # Allow overriding from variables
   url_terminus_path  = "jupyter"
-  load_balancer_port = var.load_balancer_port
+  load_balancer_port = local.proxy_port
   jupyter_base_url   = var.jupyter_base_url != null   ? var.jupyter_base_url : "${local.proxy_proto}://www.${local.proxy_address}:${local.proxy_port}"
   jupyter_base_path  = var.jupyter_base_path != null ? var.jupyter_base_path : "${var.project}/${var.venue}/${local.url_terminus_path}"
 }
@@ -58,11 +58,13 @@ resource "aws_ssm_parameter" "serviceproxy_config" {
   name       = "/unity/${var.project}/${var.venue}/cs/management/proxy/configurations/042-jupyterlab"
   type       = "String"
   value       = <<-EOT
-    <Location /${var.project}/${var.venue}/${local.url_terminus_path}>
-      Header always set Strict-Transport-Security "max-age=63072000"
-      ProxyPass "${module.frontend.internal_base_url}/${local.jupyter_base_path}" upgrade=websocket
-      ProxyPassReverse "${module.frontend.internal_base_url}/${local.jupyter_base_path}"
+    <Location /${var.project}/${var.venue}/${local.url_terminus_path}/>
+      # preserve Host header to avoid cross-origin problems
       ProxyPreserveHost on
+      Header always set Strict-Transport-Security "max-age=63072000"
+      # proxy to JupyterHub
+      ProxyPass        "${module.frontend.internal_base_url}/${local.jupyter_base_path}/" upgrade=websocket
+      ProxyPassReverse "${module.frontend.internal_base_url}/${local.jupyter_base_path}/"
       RequestHeader     set "X-Forwarded-Proto" expr=%%{REQUEST_SCHEME}
     </Location>
 EOT
