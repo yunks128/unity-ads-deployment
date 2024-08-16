@@ -26,26 +26,3 @@ variable "efs_identifier" {
   type        = string
   # Example value:uads-development-efs-fs"
 }
-
-# These are for validation of the input variables
-data "aws_ssm_parameter" "project" {
-  name = "/unity/${var.project}/${var.venue}/project-name"
-
-  lifecycle {
-    postcondition {
-      condition     = self.value == var.project
-      error_message = "project variable value ${var.project} does not match SSM parameter value in /unity/${var.project}/${var.venue}/project-name: {$data.aws_ssm_parameter.project}"
-    }
-  }
-}
-
-data "aws_ssm_parameter" "venue" {
-  name = "/unity/${var.project}/${var.venue}/venue-name"
-
-  lifecycle {
-    postcondition {
-      condition    = self.value == var.venue
-      error_message = "venue variable value ${var.venue} does not match SSM parameter value in /unity/${var.project}/${var.venue}/venue-name: {$data.aws_ssm_parameter.venue}"
-    }
-  }
-}

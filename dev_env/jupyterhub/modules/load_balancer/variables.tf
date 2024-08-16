@@ -54,6 +54,11 @@ variable "vpc_id" {
   type        = string
 }
 
+variable "internal" {
+  description = "If load balancers created should be internal or not"
+  type        = bool
+}
+
 variable "lb_subnet_ids" {
   description = "Subnet ids for the load balancer"
   type        = list

@@ -3,12 +3,6 @@ variable "component_cost_name" {
   default = "jupyterhub"
 }
 
-variable "load_balancer_port" {
-  description = "Incoming port where load balancer will accept traffic"
-  type       = number
-  default    = 8000
-}
-
 # Should be an integer between 30000 and 32767
 variable "jupyter_proxy_port" {
   description = "Listening port for Jupyter kubernetes cluster"
@@ -29,7 +23,7 @@ variable "jupyter_base_url" {
 variable "jupyter_base_path" {
   description = "Base path for Jupyter as accessed at its public facing location"
   type       = string
-  default    = ""
+  default    = null
 }
 
 variable "cognito_oauth_base_url" {
